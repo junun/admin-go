@@ -1,8 +1,5 @@
 <h1 align="center">Golang Spug</h1>
 
-<div align="center">
-
-
 ## 环境
 
 * go 1.13.5+
