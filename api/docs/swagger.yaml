@@ -1,0 +1,2137 @@
+basePath: /
+definitions:
+  admin.AppResource:
+    properties:
+      active:
+        type: integer
+      deployType:
+        type: integer
+      desc:
+        type: string
+      enableSync:
+        type: integer
+      envId:
+        type: integer
+      name:
+        type: string
+      tid:
+        type: integer
+    type: object
+  admin.AppTypeResource:
+    properties:
+      desc:
+        type: string
+      name:
+        type: string
+    type: object
+  admin.AppValueResource:
+    properties:
+      aid:
+        type: integer
+      desc:
+        type: string
+      name:
+        type: string
+      value:
+        type: string
+    type: object
+  admin.DeployApp:
+    properties:
+      name:
+        type: string
+      repoBranch:
+        type: string
+      repoCommit:
+        type: string
+      status:
+        type: integer
+      tid:
+        type: integer
+    type: object
+  admin.DomainInfoResource:
+    properties:
+      channel:
+        type: string
+      desc:
+        type: string
+      endTime:
+        type: string
+      name:
+        type: string
+      startTime:
+        type: string
+      status:
+        type: integer
+    type: object
+  admin.HostAppResource:
+    properties:
+      aid:
+        type: integer
+      desc:
+        type: string
+      hid:
+        type: integer
+    type: object
+  admin.HostResource:
+    properties:
+      addres:
+        type: string
+      desc:
+        type: string
+      envId:
+        type: integer
+      name:
+        type: string
+      password:
+        type: string
+      port:
+        type: integer
+      rid:
+        type: integer
+      status:
+        type: integer
+      username:
+        type: string
+      zoneId:
+        type: integer
+    type: object
+  admin.HostRoleResource:
+    properties:
+      desc:
+        type: string
+      name:
+        type: string
+    type: object
+  admin.LoginResource:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  admin.MenuResource:
+    properties:
+      icon:
+        type: string
+      name:
+        type: string
+      type:
+        type: integer
+    type: object
+  admin.PermResource:
+    properties:
+      desc:
+        type: string
+      name:
+        type: string
+      permission:
+        type: string
+      pid:
+        type: integer
+      type:
+        type: integer
+    type: object
+  admin.RolePermResource:
+    properties:
+      codes:
+        items:
+          type: integer
+        type: array
+    type: object
+  admin.RoleResource:
+    properties:
+      desc:
+        type: string
+      name:
+        type: string
+    type: object
+  admin.SubMenuResource:
+    properties:
+      desc:
+        type: string
+      icon:
+        type: string
+      name:
+        type: string
+      pid:
+        type: integer
+      type:
+        type: integer
+      url:
+        type: string
+    type: object
+  admin.UserResource:
+    properties:
+      email:
+        type: string
+      isActive:
+        type: integer
+      mobile:
+        type: string
+      name:
+        type: string
+      nickname:
+        type: string
+      password:
+        type: string
+      rid:
+        type: integer
+    type: object
+  models.User:
+    properties:
+      accessToken:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      isActive:
+        type: integer
+      isSupper:
+        type: integer
+      mobile:
+        type: string
+      name:
+        type: string
+      nickname:
+        type: string
+      rid:
+        type: integer
+      tokenExpired:
+        type: integer
+    type: object
+host: 127.0.0.1:8080
+info:
+  contact:
+    email: junun717@gmail.com
+    name: Junun
+    url: https://github.com/junun/admin-go
+  description: This is a sample server celler server.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: https://github.com/junun/admin-go
+  title: Swagger Example API
+  version: "1.0"
+paths:
+  /admin/config/app:
+    get:
+      description: 应用列表
+      parameters:
+      - description: active 查询项目是否生效
+        in: query
+        name: active
+        type: string
+      - description: 环境类型id
+        in: query
+        name: envId
+        type: string
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用列表
+      tags:
+      - 应用配置
+    post:
+      description: 应用新增
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 应用信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.AppResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用新增
+      tags:
+      - 应用配置
+  /admin/config/app/{id}:
+    delete:
+      description: 应用删除
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 应用ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用删除
+      tags:
+      - 应用配置
+    put:
+      description: 应用修改
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 应用ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 应用信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.AppResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用修改
+      tags:
+      - 应用配置
+  /admin/config/deploy:
+    get:
+      description: 应用模板列表
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 通过app id查询
+        in: query
+        name: aid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用模板列表
+      tags:
+      - 应用配置
+    post:
+      description: 应用发布模板新增
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 应用发布模板信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.HostRoleResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用发布模板新增
+      tags:
+      - 应用配置
+  /admin/config/deploy/{id}:
+    delete:
+      description: 应用发布模板删除
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 发布模板id
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用发布模板删除
+      tags:
+      - 应用配置
+    put:
+      description: 应用发布模板修改
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 应用发布模板修改ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 应用类型信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.AppTypeResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用发布模板修改
+      tags:
+      - 应用配置
+  /admin/config/env:
+    get:
+      description: 应用环境列表
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用环境列表
+      tags:
+      - 应用配置
+    post:
+      description: 应用环境新增
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 应用环境信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.HostRoleResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用环境新增
+      tags:
+      - 应用配置
+  /admin/config/env/{id}:
+    delete:
+      description: 应用环境删除
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 主机ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用环境删除
+      tags:
+      - 应用配置
+    put:
+      description: 应用环境修改
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 应用环境ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 应用环境信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.HostRoleResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用环境修改
+      tags:
+      - 应用配置
+  /admin/config/template:
+    get:
+      description: 应用模板列表
+      parameters:
+      - description: 项目id
+        in: query
+        name: aid
+        required: true
+        type: string
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用模板列表
+      tags:
+      - 应用配置
+  /admin/config/type:
+    get:
+      description: 应用类型列表
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用类型列表
+      tags:
+      - 应用配置
+    post:
+      description: 应用类型新增
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 应用类型信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.AppTypeResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用类型新增
+      tags:
+      - 应用配置
+  /admin/config/type/{id}:
+    delete:
+      description: 应用类型删除
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 应用类型ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用类型删除
+      tags:
+      - 应用配置
+    put:
+      description: 应用类型修改
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 应用类型ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 应用类型信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.AppTypeResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用类型修改
+      tags:
+      - 应用配置
+  /admin/config/value:
+    get:
+      description: 应用变量列表
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: aid
+        in: query
+        name: aid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用变量列表
+      tags:
+      - 应用配置
+    post:
+      description: 应用变量新增
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 应用变量信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.AppValueResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用变量新增
+      tags:
+      - 应用配置
+  /admin/config/value/{id}:
+    delete:
+      description: 应用变量删除
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 应用变量ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用变量删除
+      tags:
+      - 应用配置
+    put:
+      description: 应用变量修改
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 应用变量ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 应用变量信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.AppValueResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用变量修改
+      tags:
+      - 应用配置
+  /admin/demo/info:
+    post:
+      description: 域名新增
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 域名信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.DomainInfoResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 域名新增
+      tags:
+      - 域名管理
+  /admin/deploy/app:
+    get:
+      description: 应用发布列表
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用发布列表
+      tags:
+      - 应用发布
+    post:
+      description: 应用发布提单
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 应用发布信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.DeployApp'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用发布提单
+      tags:
+      - 应用发布
+  /admin/deploy/app/{id}:
+    delete:
+      description: 应用发布删除
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 应用发布ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用发布删除
+      tags:
+      - 应用发布
+    put:
+      description: 应用发布修改
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 应用发布ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 应用发布信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.DeployApp'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用发布修改
+      tags:
+      - 应用发布
+  /admin/deploy/app/{id}/review/{status}:
+    put:
+      description: 应用发布审核
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 应用发布ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 应用发布审核
+      tags:
+      - 应用发布
+  /admin/domain/info:
+    get:
+      description: 域名列表
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 域名列表
+      tags:
+      - 域名管理
+  /admin/domain/info/{id}:
+    delete:
+      description: 域名删除
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 域名ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 域名删除
+      tags:
+      - 域名管理
+    put:
+      description: 域名修改
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 域名ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 域名信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.DomainInfoResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 域名修改
+      tags:
+      - 域名管理
+  /admin/host:
+    get:
+      description: 主机列表
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 主机列表
+      tags:
+      - 主机管理
+    post:
+      description: 主机添加
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 主机信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.HostResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 主机添加
+      tags:
+      - 主机管理
+  /admin/host/app:
+    get:
+      description: 主机业务列表
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 通过host id 查询
+        in: query
+        name: hid
+        type: string
+      - description: 通过app id 查询
+        in: query
+        name: aid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 主机业务列表
+      tags:
+      - 主机管理
+    post:
+      description: 主机业务绑定
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 主机业务信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.HostAppResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 主机业务绑定
+      tags:
+      - 主机管理
+  /admin/host/app/{id}:
+    delete:
+      description: 主机业务删除
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 主机业务ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 主机业务删除
+      tags:
+      - 主机管理
+    put:
+      description: 主机业务修改
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 主机业务ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 主机业务信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.HostRoleResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 主机业务修改
+      tags:
+      - 主机管理
+  /admin/host/appid:
+    get:
+      description: 通过业务查询主机列表
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 通过app id 查询
+        in: query
+        name: aid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 通过业务查询主机列表
+      tags:
+      - 主机管理
+  /admin/host/role:
+    get:
+      description: 主机类型列表
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 主机类型列表
+      tags:
+      - 主机管理
+    post:
+      description: 主机类型添加
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 主机类型信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.HostRoleResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 主机类型添加
+      tags:
+      - 主机管理
+  /admin/host/role/{id}:
+    delete:
+      description: 主机类型删除
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 环境ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 主机类型删除
+      tags:
+      - 主机管理
+    put:
+      description: 主机类型修改
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 环境ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 主机类型信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.HostRoleResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 主机类型修改
+      tags:
+      - 主机管理
+  /admin/hosts/{id}:
+    delete:
+      description: 主机删除
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 主机ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 主机删除
+      tags:
+      - 主机管理
+    put:
+      description: 主机修改
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 主机ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 主机信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.HostRoleResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 主机修改
+      tags:
+      - 主机管理
+  /admin/menus:
+    get:
+      description: 一级菜单列表
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 一级菜单列表
+      tags:
+      - 菜单管理
+    post:
+      description: 一级菜单添加， type must 1
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 一级菜单信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.MenuResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 一级菜单添加
+      tags:
+      - 菜单管理
+  /admin/menus/{id}:
+    delete:
+      description: 菜单删除
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 菜单删除
+      tags:
+      - 菜单管理
+    put:
+      description: 一级菜单修改
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 一级菜单信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.MenuResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 一级菜单修改
+      tags:
+      - 菜单管理
+  /admin/perms:
+    get:
+      description: 权限列表
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 权限列表
+      tags:
+      - 权限管理
+    post:
+      description: 权限添加
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 权限信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.PermResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 权限添加
+      tags:
+      - 权限管理
+  /admin/perms/{id}:
+    delete:
+      description: 权限删除
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 权限删除
+      tags:
+      - 权限管理
+    put:
+      description: 权限修改
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 权限信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.PermResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 权限修改
+      tags:
+      - 权限管理
+  /admin/perms/lists:
+    get:
+      description: 获取所以权限项
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 获取所以权限项
+      tags:
+      - 权限管理
+  /admin/roles:
+    get:
+      description: 角色列表
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 角色列表
+      tags:
+      - 角色管理
+    post:
+      description: 新增角色
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 角色信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.RoleResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 新增角色
+      tags:
+      - 角色管理
+  /admin/roles/{id}:
+    delete:
+      description: 删除角色
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 角色id
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 删除角色
+      tags:
+      - 角色管理
+    put:
+      description: 修改角色
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 角色信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.RoleResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 修改角色
+      tags:
+      - 角色管理
+  /admin/roles/{id}/permissions:
+    get:
+      description: 角色权限详情
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 角色权限详情
+      tags:
+      - 角色管理
+    post:
+      description: 添加/修改角色权限
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 角色权限信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.RolePermResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 添加/修改角色权限
+      tags:
+      - 角色管理
+  /admin/submenus:
+    get:
+      description: 二级菜单列表
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 二级菜单列表
+      tags:
+      - 菜单管理
+    post:
+      description: 二级菜单添加， type must 1
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 二级菜单信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.SubMenuResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 二级菜单添加
+      tags:
+      - 菜单管理
+  /admin/submenus/{id}:
+    put:
+      description: 二级菜单修改
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 二级菜单信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.SubMenuResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 二级菜单修改
+      tags:
+      - 菜单管理
+  /admin/user:
+    get:
+      description: 用户列表
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 用户列表
+      tags:
+      - 用户管理
+    post:
+      consumes:
+      - application/json
+      description: 新增用户
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 用户信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.UserResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 新增用户
+      tags:
+      - 用户管理
+  /admin/user/{id}:
+    delete:
+      description: 删除用户
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 删除用户
+      tags:
+      - 用户管理
+    put:
+      consumes:
+      - application/json
+      description: 修改用户
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 用户信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 修改用户
+      tags:
+      - 用户管理
+  /admin/user/login:
+    post:
+      description: 用户登录
+      parameters:
+      - description: 用户登录信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.LoginResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "用户不存在！", "data": {}}'
+          schema:
+            type: string
+      summary: 用户登录
+      tags:
+      - 用户管理
+  /admin/user/logout:
+    post:
+      description: 用户登出
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "登出失败", "data": {}}'
+          schema:
+            type: string
+      summary: 用户登出
+      tags:
+      - 用户管理
+  /admin/user/perms/{id}:
+    get:
+      description: 用户菜单列表
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID
+        in: query
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 用户菜单列表
+      tags:
+      - 用户管理
+swagger: "2.0"

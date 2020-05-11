@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+
+function start() {
+    test -f $APP_LOG && > $APP_LOG
+    test -f $GC_LOG && > $GC_LOG
+    success_flag="(?:Server startup|Dubbo service server started)"
+    failed_flag="(?:Exception)"
+    rm -rf $APP_PID
+    /bin/su -c "$APP_BASE/bin/run.sh" tomcat
+    sleep 2
+    if [ -s $APP_PID ]; then
+        echo  "$app Server startup"
+        return 0
+    else
+        echo "$app failed to start."
+    	return 1
+    fi
+}
+
+function stop() {
+    kill $(cat $APP_PID) > /dev/null 2>&1
+    #su -c "/bin/rm -rf $CATALINA_TMPDIR/*" tomcat
+    sleep 5
+    if [ -s $APP_PID ]; then
+        kill -9 $(cat $APP_PID) > /dev/null 2>&1
+    fi
+    echo "$app stoped."
+    return 0
+}
+
+monitor() {
+    check_num=`ps ax -o pid,cmd|grep "$JAR_BOOTER"|grep -v grep|wc -l`
+    if [ $check_num -eq 0 ];then
+        start
+        echo `date +"%F %T"` - restart.
+    fi
+}
+
+function restart() {
+    stop
+    start
+}
+
+function log() {
+    if [ -f $APP_LOG ]; then
+        tail -5000 $APP_LOG
+    else
+        tail -5000 $(dirname $APP_LOG)/$(ls $(dirname $APP_LOG) | grep -v "gc" | head -1)
+    fi
+}

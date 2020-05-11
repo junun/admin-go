@@ -1,0 +1,35 @@
+#!/bin/bash
+#
+source var
+WORKSPACE=$(cd $(dirname $0)/; pwd)
+cd $WORKSPACE
+
+app=${AppName}
+source /etc/profile
+
+APP_BASE=/data/webapps/$app
+APP_PID=${APP_BASE}/${app}.pid
+CATALINA_TMPDIR=$APP_BASE/temp
+
+APP_LOG=$APP_BASE/logs/${app}.log
+GC_LOG=$APP_BASE/logs/gc.log
+
+JAVA_OPTS=${JavaOpts}
+JAR_BOOTER="${app}.jar"
+FORCE_KILL_TIME="30"
+#HEALTH_CHECK_METRIC=""
+
+export JAVA_HOME JAR_BOOTER JAVA_OPTS APP_LOG APP_PID
+
+cd $(dirname $(find -L $APP_BASE -name $JAR_BOOTER | head -1))
+
+. /etc/init.d/jarFuncs
+
+case "$1" in
+start|stop|restart|monitor|log)
+    $1
+;;
+*)
+    echo $"Usage: $0 {start|stop|restart|monitor|log}"
+    exit 2
+esac
