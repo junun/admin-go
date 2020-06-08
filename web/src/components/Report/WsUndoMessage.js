@@ -35,8 +35,10 @@ export default class extends React.Component {
     const token = sessionStorage.getItem('jwt');
     const id = this.props.id ? this.props.id: 0;
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    
-    this.socket = new window.WebSocket(`${protocol}//127.0.0.1:8080/admin/undeploy/ws/${id}/ssh/${token}`);
+    const hostname = window.location.hostname;
+    const port = window.location.port;
+
+    this.socket = new window.WebSocket(`${protocol}//${hostname}:${port}/admin/undeploy/ws/${id}/ssh/${token}`);
 
     var thus = this;
     thus.socket.onopen = function () {

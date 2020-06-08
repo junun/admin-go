@@ -40,6 +40,91 @@ npm install
 // 开发环境
 umi dev
 ```
+### 前端线上部署 
+```
+1）在项目前端的根目录下，执行
+umi build
+
+2) 把 dist 目录同步到线上机器需要部署的位置
+
+3） 使用Nginx做部署， 配置文件如下。
+做了来源访问限制。
+```
+```
+# cat /etc/nginx/conf.d/omp.zhien88.com.conf
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+
+
+upstream omp {
+    server 127.0.0.1:9090;
+}
+
+server {
+    server_name omp.zhien88.com;
+    listen 3000;
+    gzip on;
+    gzip_min_length 1k;
+    gzip_comp_level 9;
+    gzip_types text/plain application/javascript application/x-javascript text/css application/xml text/javascript application/x-httpd-php image/jpeg image/gif image/png;
+    gzip_vary on;
+    gzip_disable "MSIE [1-6]\.";
+    #include /etc/nginx/ssl-params.conf;
+
+    root /data/omp/web/dist;
+
+    location @fallback {
+        rewrite .* /index.html break;
+    }
+
+    location / {
+        allow 10.0.0.0/8;
+        allow 127.0.0.1;
+        deny all;
+        try_files $uri @fallback;
+        autoindex on;
+    }
+
+
+    location /swagger/ {
+        allow 10.0.0.0/8;
+        allow 127.0.0.1;
+        deny all;
+        proxy_pass http://omp;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        client_max_body_size    100m;
+    }
+
+    location /admin/ {
+        allow 10.0.0.0/8;
+        allow 127.0.0.1;
+        deny all;
+        proxy_pass http://omp;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        client_max_body_size    100m;
+    }
+}
+```
 ### 后端
 
 ```
@@ -54,7 +139,46 @@ go run manage.go -c create_admin
 go build main.go
 ```
 
+### 后端线上部署
+```
+1) 打包成 linux 平台的二进制包 
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build  main.go
 
+
+2）copy 依赖目录和文件到部署机器的相应目录
+[root@monitor ~]# cd /data/omp/api
+[root@monitor api]# ll
+总用量 44832
+drwxr-xr-x 2 root root      4096 6月   6 15:20 conf
+drwxr-xr-x 2 root root      4096 5月  11 17:49 docs
+drwxr-xr-x 3 root root      4096 5月  11 17:49 files
+-rwxr-xr-x 1  501 games 45879616 6月   6 23:15 main
+-rw-r--r-- 1 root root      1807 5月  11 17:49 manage.go
+drwxr-xr-x 6 root root      4096 6月   6 15:18 runtime
+drwxr-xr-x 2 root root      4096 6月   5 20:33 templates
+
+
+3）systemd  启动配置
+
+[root@monitor api]# cat /etc/systemd/system/ompapi.service
+[Unit]
+Description=ompapi
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/data/omp/api
+ExecStart=/data/omp/api/main
+RestartSec=10s
+Restart=on-failure
+UMask=0007
+
+[Install]
+WantedBy=multi-user.target
+
+4) 启动和开机自启动
+略
+```
 ## 后端目录介绍
 
 ```

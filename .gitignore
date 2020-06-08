@@ -18,3 +18,5 @@
 .DS_Store
 */runtime/*
 .idea
+/api/conf/release.ini
+/api/main

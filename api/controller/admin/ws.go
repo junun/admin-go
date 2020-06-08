@@ -237,11 +237,16 @@ func SyncWsApp(c *gin.Context)  {
 			}
 
 			util.WsWriteMessage("开始执行自定义初始化任务", wsConn)
-			syncBywsId(app.Tid, desDir, app.Name,  SftpClient, Scli, wsConn)
+
+			e 	:= syncBywsId(app , desDir, app.Name,  SftpClient, Scli, wsConn)
+			if e!= nil {
+				util.WsWriteMessage(err.Error(), wsConn)
+				return
+			}
 
 
 			// 初始化完成 修改状态
-			e 	:= models.DB.Model(&models.HostApp{}).
+			e 	= models.DB.Model(&models.HostApp{}).
 				Where("id = ?", v.ID).
 				Update("status", 1).
 				Error
@@ -255,8 +260,8 @@ func SyncWsApp(c *gin.Context)  {
 	util.WsWriteMessage("项目初始化完毕!", wsConn)
 }
 
-func syncBywsId(id int, path string, name string, SftpClient *sftp.Client, Scli *ssh.Client, ws *websocket.Conn)  {
-	switch id {
+func syncBywsId(app models.App, path string, name string, SftpClient *sftp.Client, Scli *ssh.Client, ws *websocket.Conn) error {
+	switch app.Tid {
 	// backend jar
 	case 1:
 		// copy 项目样本文件夹到 Sync RunTime Dir
@@ -265,27 +270,30 @@ func syncBywsId(id int, path string, name string, SftpClient *sftp.Client, Scli 
 		e   	:= util.CopyDirectory(srcDir, path)
 		if e != nil {
 			util.WsWriteMessage(e.Error(), ws)
-			return
+			return e
 		}
 
 		// 检查项目变量
 		var value []models.AppSyncValue
 		models.DB.Model(&models.AppSyncValue{}).
-			Where("aid = ?", id).
+			Where("aid = ?", app.ID).
 			Find(&value)
 
 		if len(value) <= 0 {
+			var e = fmt.Errorf("%s", "该项目没有设置环境变量，请先设置!")
 			util.WsWriteMessage("该项目没有设置环境变量，请先设置!", ws)
-			return
+			return e
 		}
 
 		// 生成本地变量文件 var
 		f, e 	:= os.OpenFile(path + "/bin/var", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		defer f.Close()
 		if e 	!= nil {
 			log.Fatal(e)
 			util.WsWriteMessage(e.Error(), ws)
+			return e
 		}
-		defer f.Close()
+
 
 		for index, v := range value {
 			str := v.Name + "='" + v.Value + "'\n"
@@ -293,11 +301,13 @@ func syncBywsId(id int, path string, name string, SftpClient *sftp.Client, Scli 
 				e := ioutil.WriteFile(path + "/bin/var", []byte(str), 0644)
 				if e != nil {
 					util.WsWriteMessage(e.Error(), ws)
+					return e
 				}
 			} else {
 				_, e = f.Write([]byte(str))
 				if e != nil {
 					util.WsWriteMessage(e.Error(), ws)
+					return e
 				}
 			}
 		}
@@ -308,13 +318,13 @@ func syncBywsId(id int, path string, name string, SftpClient *sftp.Client, Scli 
 		e 		= util.PutFile(SftpClient, srcFile, "/etc/init.d/")
 		if e != nil {
 			util.WsWriteMessage(e.Error(), ws)
-			return
+			return e
 		}
 
 		e 		= SftpClient.Chmod("/etc/init.d/jarFuncs", 0755)
 		if e 	!= nil {
 			util.WsWriteMessage(e.Error(), ws)
-			return
+			return e
 		}
 
 		// 上传目录
@@ -322,7 +332,7 @@ func syncBywsId(id int, path string, name string, SftpClient *sftp.Client, Scli 
 		e   	= util.PutDirectory(SftpClient, path, "/data/webapps/" + name)
 		if e 	!= nil {
 			util.WsWriteMessage(e.Error(), ws)
-			return
+			return e
 		}
 
 		util.WsWriteMessage("改变目标主机项目目录权限", ws)
@@ -332,7 +342,7 @@ func syncBywsId(id int, path string, name string, SftpClient *sftp.Client, Scli 
 		_, e 	= util.ExecuteCmd(cmdstr,  Scli)
 		if e 	!= nil {
 			util.WsWriteMessage(e.Error(), ws)
-			return
+			return e
 		}
 
 		util.WsWriteMessage("脚本添加执行权限", ws)
@@ -342,12 +352,14 @@ func syncBywsId(id int, path string, name string, SftpClient *sftp.Client, Scli 
 		_, e 	= util.ExecuteCmd(cmdstr, Scli)
 		if e 	!= nil {
 			util.WsWriteMessage(e.Error(), ws)
-			return
+			return e
 		}
 
 	case 2:
 		fmt.Println(2)
+		return nil
 	}
+	return nil
 }
 
 

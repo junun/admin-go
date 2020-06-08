@@ -91,7 +91,6 @@ func NewSshConn(cols, rows int, sshClient *ssh.Client) (*SshConn, error) {
 	}
 	// Request pseudo terminal
 	if err := sshSession.RequestPty("xterm", rows, cols, modes); err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 	// Start remote shell

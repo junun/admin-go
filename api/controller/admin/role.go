@@ -170,10 +170,11 @@ func DeleteRole(c *gin.Context)  {
 // @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
 // @Router /admin/roles/{id}/permissions [get]
 func GetRolePerms(c *gin.Context) {
-	if !middleware.PermissionCheckMiddleware(c,"role-perm-list") {
-		util.JsonRespond(403, "请求资源被拒绝", "", c)
-		return
-	}
+	//if !middleware.PermissionCheckMiddleware(c,"role-perm-list") {
+	//	util.JsonRespond(403, "请求资源被拒绝", "", c)
+	//	return
+	//}
+
 	var data map[string]interface{}
 	var prole []models.RolePermissionRel
 	data = make(map[string]interface{})

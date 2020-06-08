@@ -134,17 +134,17 @@ func WsTokenAuthMiddleware1(pemr string, c *gin.Context)  {
 		key 		:= models.RoleRermsSetKey
 		UserRid 	:= user.Rid
 		str 		:= fmt.Sprintf("%v", UserRid)
-		redis_key 	:=  key + str
+		RedisKey 	:= key + str
 
 		// 检查 redis 有没有该key的集合
-		err := models.Rdb.Exists(redis_key).Val()
+		err 	:= models.Rdb.Exists(RedisKey).Val()
 		if err != 1 {
 			rid 	:= UserRid
-			models.SetRolePermToSet(redis_key, rid)
+			models.SetRolePermToSet(RedisKey, rid)
 		}
 
 		// 检查对应的set是否有该角色权限
-		if models.CheckMemberByKey(redis_key, pemr) {
+		if !models.CheckMemberByKey(RedisKey, pemr) {
 			util.JsonRespond(403, "请求资源被拒绝", "", c)
 			return
 		}

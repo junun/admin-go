@@ -113,16 +113,16 @@ func GetGitCommit(c *gin.Context)  {
 // @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
 // @Router /admin/deploy/app [get]
 func GetAppDeploy(c *gin.Context)  {
-	if !middleware.PermissionCheckMiddleware(c,"deploy-app-list") {
-		util.JsonRespond(403, "请求资源被拒绝", "", c)
-		return
-	}
+	//if !middleware.PermissionCheckMiddleware(c,"deploy-app-list") {
+	//	util.JsonRespond(403, "请求资源被拒绝", "", c)
+	//	return
+	//}
 
 	data := make(map[string]interface{})
 
 	var deploy []AppTemplateDeploy
 	// 分页逻辑还没有写，有空补上。
-	e := models.DB.Raw("select d.*, e.aid from app_deploy d left join deploy_extend e on d.tid=e.dtid").Scan(&deploy).Error
+	e := models.DB.Raw("select d.*, e.aid from app_deploy d left join deploy_extend e on d.tid=e.dtid order by d.id DESC").Scan(&deploy).Error
 
 	if e != nil {
 		util.JsonRespond(500, e.Error(), "", c)

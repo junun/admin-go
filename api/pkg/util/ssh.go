@@ -95,10 +95,10 @@ func SSHDialTimeoutClient(network, addr string, config *ssh.ClientConfig, timeou
 }
 
 func ReturnClientConfig(username string, password string) (*ssh.ClientConfig, error) {
-	dir, _ := os.Getwd()
-	path := dir + "/" + GetIdRsaPath()
+	dir, _ 	:= os.Getwd()
+	path 	:= dir + "/" + GetIdRsaPath()
 
-	key, err := ioutil.ReadFile(path+"id_rsa")
+	key, err := ioutil.ReadFile(path + "id_rsa")
 	if err != nil {
 		log.Fatalf("unable to read private key: %v", err)
 	}

@@ -211,7 +211,8 @@ func GetGitCommitByCommand(aid int, url string)  {
 
 func GitCheckoutByCommit(aid int, url, commit string) error {
 	e 		:= GitPull(aid, url)
-	if e != nil && e.Error() != "already up-to-date" {
+
+	if e 	!= nil && e.Error() != "already up-to-date" {
 		return e
 	}
 
@@ -221,22 +222,23 @@ func GitCheckoutByCommit(aid int, url, commit string) error {
 	}
 
 	// 通过缩短的commit hash查找commit hash，用checkout
-	cmd 		:= exec.Command("git", "show", "--pretty=format:%H", "-q", commit)
+	cmd 		:= exec.Command("git", "log", "-1", "--pretty=format:%H", commit)
 	cmd.Dir 	=  ReturnGitLocalPath(aid, url)
-	out, err 	:= cmd.CombinedOutput()
+	out, e 		:= cmd.CombinedOutput()
 
-	if err != nil {
-		return  err
+	if e 	!= nil {
+		return  e
 	}
 
-	s := strings.Split(string(out),"\n")
+	s 	:= strings.Split(string(out),"\n")
 	LongHash :=	s[0]
+	fmt.Println(LongHash)
 
 	e 	= w.Checkout(&git.CheckoutOptions{
 		Hash: plumbing.NewHash(LongHash),
 	})
 
-	if e != nil {
+	if e!= nil {
 		return e
 	}
 

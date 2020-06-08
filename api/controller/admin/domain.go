@@ -37,10 +37,10 @@ type DomainCertResource struct {
 // @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
 // @Router /admin/domain/info [get]
 func GetDomainInfo(c *gin.Context)  {
-	if !middleware.PermissionCheckMiddleware(c,"domain-info-list") {
-		util.JsonRespond(403, "请求资源被拒绝", "", c)
-		return
-	}
+	//if !middleware.PermissionCheckMiddleware(c,"domain-info-list") {
+	//	util.JsonRespond(403, "请求资源被拒绝", "", c)
+	//	return
+	//}
 
 	var domain []models.DomainInfo
 	var count int

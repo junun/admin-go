@@ -33,10 +33,10 @@ type Permissions struct {
 // @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
 // @Router /admin/perms [get]
 func GetPerms(c *gin.Context) {
-	if !middleware.PermissionCheckMiddleware(c,"perm-list") {
-		util.JsonRespond(403, "请求资源被拒绝", "", c)
-		return
-	}
+	//if !middleware.PermissionCheckMiddleware(c,"perm-list") {
+	//	util.JsonRespond(403, "请求资源被拒绝", "", c)
+	//	return
+	//}
 
 	var mps []models.MenuPermissions
 	var count int

@@ -45,10 +45,10 @@ type HostAppResource struct {
 // @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
 // @Router /admin/host/role [get]
 func GetHostRole(c *gin.Context)  {
-	if !middleware.PermissionCheckMiddleware(c,"host-role-list") {
-		util.JsonRespond(403, "请求资源被拒绝", "", c)
-		return
-	}
+	//if !middleware.PermissionCheckMiddleware(c,"host-role-list") {
+	//	util.JsonRespond(403, "请求资源被拒绝", "", c)
+	//	return
+	//}
 
 	var roles []models.HostRole
 	var count int
@@ -192,10 +192,10 @@ func DelHostRole(c *gin.Context)  {
 // @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
 // @Router /admin/host [get]
 func GetHost(c *gin.Context)  {
-	if !middleware.PermissionCheckMiddleware(c,"host-list") {
-		util.JsonRespond(403, "请求资源被拒绝", "", c)
-		return
-	}
+	//if !middleware.PermissionCheckMiddleware(c,"host-list") {
+	//	util.JsonRespond(403, "请求资源被拒绝", "", c)
+	//	return
+	//}
 
 	var roles []models.Host
 	var count int
@@ -424,10 +424,10 @@ func ConsoleHost(c *gin.Context)  {
 // @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
 // @Router /admin/host/app [get]
 func GetHostApp(c *gin.Context)  {
-	if !middleware.PermissionCheckMiddleware(c,"host-app-list") {
-		util.JsonRespond(403, "请求资源被拒绝", "", c)
-		return
-	}
+	//if !middleware.PermissionCheckMiddleware(c,"host-app-list") {
+	//	util.JsonRespond(403, "请求资源被拒绝", "", c)
+	//	return
+	//}
 
 	var apps []models.HostApp
 	var count int
@@ -621,10 +621,10 @@ func DelHostApp(c *gin.Context)  {
 // @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
 // @Router /admin/host/appid [get]
 func GetHostByAppId(c *gin.Context)  {
-	if !middleware.PermissionCheckMiddleware(c,"host-list") {
-		util.JsonRespond(403, "请求资源被拒绝", "", c)
-		return
-	}
+	//if !middleware.PermissionCheckMiddleware(c,"host-list") {
+	//	util.JsonRespond(403, "请求资源被拒绝", "", c)
+	//	return
+	//}
 
 	var host []models.Host
 

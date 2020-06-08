@@ -55,8 +55,8 @@ class BasicLayout extends Component {
         <Layout>
             <Sider width={256} style={{ minHeight: '100vh', color: 'white' }} collapsible>
               <div style={{ height: '32px', background: 'rgba(225,225,225,.2)', margin: '16px', textAlign: 'center', padding: '5px',overflow: 'hidden' }}>
-                <Icon type="deployment-unit" style={{fontSize: '18px'}} />&nbsp;&nbsp;
-                <span style={{fontSize: '16px', }}>Demo 管理平台</span>
+                <Icon type="file-sync" style={{fontSize: '18px'}} />&nbsp;&nbsp;
+                <span style={{fontSize: '16px', }}>Spug 管理平台</span>
               </div>
               <SiderMenu menuData={menu}
                          didMount={this.menuDidMount}

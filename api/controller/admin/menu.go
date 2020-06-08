@@ -174,10 +174,10 @@ func DeleteMenus(c *gin.Context)  {
 // @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
 // @Router /admin/submenus [get]
 func GetSubMenu(c *gin.Context) {
-	if !middleware.PermissionCheckMiddleware(c,"submenu-list") {
-		util.JsonRespond(403, "请求资源被拒绝", "", c)
-		return
-	}
+	//if !middleware.PermissionCheckMiddleware(c,"submenu-list") {
+	//	util.JsonRespond(403, "请求资源被拒绝", "", c)
+	//	return
+	//}
 
 	var res []models.MenuPermissions
 	var count int

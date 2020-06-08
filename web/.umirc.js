@@ -25,7 +25,7 @@ export default {
   "proxy": {
     "/admin": {
       // "target": "http://10.101.1.152:9090/",
-      "target": "http://localhost:8080",
+      "target": "http://localhost:9090",
       request_timeout: 12000,
       "changeOrigin": true,
       // pathRewrite: {

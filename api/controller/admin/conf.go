@@ -35,6 +35,7 @@ type DeployExtendResource struct {
 	EnableCheck		int      `form:"EnableCheck"`
 	HostIds         string   `form:"HostIds"`
 	RepoUrl         string   `form:"RepoUrl"`
+	Tag             string   `form:"Tag"`
 	Versions        int      `form:"Versions"`
 	PreCode  		string   `form:"PreCode"`
 	PostCode  		string   `form:"PostCode"`
@@ -60,10 +61,10 @@ type AppValueResource struct {
 // @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
 // @Router /admin/config/env [get]
 func GetConfigEnv(c *gin.Context)  {
-	if !middleware.PermissionCheckMiddleware(c,"config-env-list") {
-		util.JsonRespond(403, "请求资源被拒绝", "", c)
-		return
-	}
+	//if !middleware.PermissionCheckMiddleware(c,"config-env-list") {
+	//	util.JsonRespond(403, "请求资源被拒绝", "", c)
+	//	return
+	//}
 
 	var roles []models.ConfigEnv
 	var count int
@@ -209,10 +210,10 @@ func DelConfigEnv(c *gin.Context)  {
 // @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
 // @Router /admin/config/app [get]
 func GetConfigApp(c *gin.Context)  {
-	if !middleware.PermissionCheckMiddleware(c,"config-app-list") {
-		util.JsonRespond(403, "请求资源被拒绝", "", c)
-		return
-	}
+	//if !middleware.PermissionCheckMiddleware(c,"config-app-list") {
+	//	util.JsonRespond(403, "请求资源被拒绝", "", c)
+	//	return
+	//}
 
 	var app []models.App
 	var count int
@@ -793,6 +794,10 @@ func AddDeployExtend(c *gin.Context)  {
 		DstRepo: strings.TrimSpace(data.DstRepo),
 	}
 
+	if data.Tag !=  "" {
+		det.Tag = data.Tag
+	}
+
 	e := models.DB.Save(&det).Error
 	if e != nil {
 		util.JsonRespond(500, e.Error(), "", c)
@@ -839,10 +844,10 @@ func PutDeployExtend(c *gin.Context) {
 	}
 
 	e := models.DB.Exec("update deploy_extend set aid = ?, template_name = ?," +
-		"enable_check = ?, host_ids = ? , repo_url = ?," +
+		"enable_check = ?, tag = ?, host_ids = ? , repo_url = ?," +
 		"versions = ?, pre_code = ?, post_code = ?, pre_deploy = ? , " +
 		"post_deploy = ?, dst_dir = ?, dst_repo = ? where dtid = ? ",
-		data.Aid, data.TemplateName, data.EnableCheck, data.HostIds, data.RepoUrl,
+		data.Aid, data.TemplateName, data.EnableCheck, data.Tag, data.HostIds, data.RepoUrl,
 		data.Versions, data.PreCode, data.PostCode, data.PreDeploy, data.PostDeploy,
 		strings.TrimSpace(data.DstDir),strings.TrimSpace(data.DstRepo), c.Param("id")).Error
 
@@ -888,10 +893,10 @@ func DelDeployExtend(c *gin.Context) {
 // @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
 // @Router /admin/config/template [get]
 func GetAppTemplate(c *gin.Context)  {
-	if !middleware.PermissionCheckMiddleware(c,"config-app-list") {
-		util.JsonRespond(403, "请求资源被拒绝", "", c)
-		return
-	}
+	//if !middleware.PermissionCheckMiddleware(c,"config-app-list") {
+	//	util.JsonRespond(403, "请求资源被拒绝", "", c)
+	//	return
+	//}
 
 	var det []models.DeployExtend
 

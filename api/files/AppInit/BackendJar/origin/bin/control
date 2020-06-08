@@ -1,8 +1,9 @@
 #!/bin/bash
 #
-source var
+
 WORKSPACE=$(cd $(dirname $0)/; pwd)
 cd $WORKSPACE
+source var
 
 app=${AppName}
 source /etc/profile

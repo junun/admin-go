@@ -40,10 +40,7 @@ class SiderMenu extends React.Component {
           return <SubMenu key={x.id} title={<span><Icon type={x.Icon} /><span>{x.Name}</span></span>}>
             {items}
           </SubMenu>;
-        } else {
-          return <SubMenu key={x.id} title={<span><Icon type={x.Icon} /><span>{x.Name}</span></span>}>
-          </SubMenu>;
-        }
+        } 
     });
     // console.log(menuKey);
     // let selectedKey;

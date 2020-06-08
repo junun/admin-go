@@ -6,6 +6,11 @@ import (
 )
 
 func main() {
+
+	var err = fmt.Errorf("%s", "the error test for fmt.Errorf")
+	fmt.Println(err)
+
+
 	i := 0
 	defer fmt.Println("a:", i)
 	//闭包调用，将外部i传到闭包中进行计算，不会改变i的值，如上边的例3

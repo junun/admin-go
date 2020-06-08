@@ -40,6 +40,14 @@ class Ext1Setup1 extends React.Component {
     });
   };
 
+  onTagInputChange = (e) => {
+    var tmp = this.props.info;
+    tmp['Tag'] = e.target.value;
+    this.setState({ 
+      info: tmp,
+    });
+  };
+
   nextPage = () => {
     this.props.nextPage(this.state.info)
   };
@@ -53,6 +61,9 @@ class Ext1Setup1 extends React.Component {
         </Form.Item>
         <Form.Item required label="Git仓库地址">
           <Input value={info['RepoUrl']} onChange={this.onInputChange} placeholder="请输入Git仓库地址"/>
+        </Form.Item>
+        <Form.Item label="编译版本号">
+          <Input value={info['Tag']} onChange={this.onTagInputChange} placeholder="请输入Tag版本号，如1.0.0"/>
         </Form.Item>
         <Form.Item label="发布审核">
           <Switch
