@@ -107,7 +107,8 @@ func AddJob(c *gin.Context)  {
 		Operator: uid.(int),
 	}
 
-	if data.StartTime != "null" && data.EndTime != "null" {
+
+	if data.StartTime != "" && data.EndTime != "" {
 		task.StartTime, _ 	= time.Parse(time.RFC3339, data.StartTime)
 		task.EndTime, _		= time.Parse(time.RFC3339, data.EndTime)
 		if  task.StartTime.After(task.EndTime) {
@@ -117,11 +118,11 @@ func AddJob(c *gin.Context)  {
 	}
 
 
-	if data.StartTime != "null" {
+	if data.StartTime != "" {
 		task.StartTime, _ 	= time.Parse(time.RFC3339, data.StartTime)
 	}
 
-	if data.EndTime != "null" {
+	if data.EndTime != "" {
 		task.EndTime, _		= time.Parse(time.RFC3339, data.EndTime)
 		if  time.Now().After(task.EndTime) {
 			util.JsonRespond(500, "结束时间不能晚于现在时间！", "", c)
@@ -194,7 +195,7 @@ func PutJob(c *gin.Context)  {
 	task.IsMore 	= data.IsMore
 	task.Operator 	= uid.(int)
 
-	if data.StartTime != "null" && data.EndTime != "null" {
+	if data.StartTime != "" && data.EndTime != "" {
 		task.StartTime, _ 	= time.Parse(time.RFC3339, data.StartTime)
 		task.EndTime, _		= time.Parse(time.RFC3339, data.EndTime)
 		if  task.StartTime.After(task.EndTime) {
@@ -203,11 +204,11 @@ func PutJob(c *gin.Context)  {
 		}
 	}
 
-	if data.StartTime != "null" {
+	if data.StartTime != "" {
 		task.StartTime, _ 	= time.Parse(time.RFC3339, data.StartTime)
 	}
 
-	if data.EndTime != "null" {
+	if data.EndTime != "" {
 		endTime, _		:= time.Parse(time.RFC3339, data.EndTime)
 		if  time.Now().After(endTime) {
 			util.JsonRespond(500, "结束时间不能晚于现在时间！", "", c)
@@ -590,8 +591,9 @@ func AddNewJob(mytype, id, isMore int, hostidstr, name, spec, cmd string)  {
 	default:
 		// 先检查ip地址是否为本机
 		var host models.Host
+		hostid,_ 	:= strconv.Atoi(hostidstr)
 		models.DB.Model(&models.Host{}).
-			Where("id = ?", id).
+			Where("id = ?", hostid).
 			Where("status = 1").
 			Find(&host)
 
