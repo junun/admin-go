@@ -16,6 +16,16 @@ const (
 
 	// all perms key
 	AllPermsKey 	= "all_perms_key"
+
+	// Cron Jobs Name-EntryID Hash key
+	CronNameEntryIdKey = "cron_name_entryid"
+
+	// 本机ip地址缓存 key
+	ServerLocalRunIpKey = "server_local_run_ipaddress"
+
+	// Cron Jobs 运行时候需要限制单实例运行的情况，用于标识正在运行任务的Hash key
+	CronJobOnRunKey 	= "cron_job_on_run_key"
+
 )
 
 // 角色

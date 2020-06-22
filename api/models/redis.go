@@ -22,6 +22,9 @@ func init() {
 	ConnectRedis(r.Key("ADDRESS").String(),
 				r.Key("PASSWD").String(),
 				ins)
+
+	// 每次服务启动清除本机ip地址缓存
+	Rdb.Del(ServerLocalRunIpKey)
 }
 
 func ConnectRedis(addr string, passwd string, db int){

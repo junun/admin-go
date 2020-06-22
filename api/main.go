@@ -1,6 +1,7 @@
 package main
 
 import (
+	"api/controller/admin"
 	"api/pkg/setting"
 	"api/routers"
 	"fmt"
@@ -19,10 +20,17 @@ import (
 // @license.name Apache 2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 
-// @host 127.0.0.1:8080
+// @host 127.0.0.1:9090
 // @BasePath /
 
 func main() {
+	// 主进程运行期间启动一个定时任务协程检查证书和域名是否到期
+	go func() {
+		//admin.CheckDomainAndCretCronTask()
+		admin.StartCronJobsOnBoot()
+		//fmt.Println(models.CronMain.Entries())
+	}()
+
 	r := routers.InitRouter()
 
 	s := &http.Server{

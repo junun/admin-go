@@ -1,5 +1,14 @@
-import {httpGet, httpPut, httpPost, httpDel} from '@/utils/request';
+import {httpGet, httpPut, httpPatch, httpPost, httpDel} from '@/utils/request';
 import { stringify } from 'qs';
+
+
+export async function getNotify(params) {
+  return httpGet(`/admin/notify`);
+}
+
+export async function patchNotify(params) {
+  return httpPatch(`/admin/notify`, params);
+}
 
 export async function userLogin(params) {
   return httpPost('/admin/user/login', params);

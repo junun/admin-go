@@ -1,5 +1,6 @@
 import React, {Fragment, Component} from "react";
-import {Form, Card, Input, Table, Divider, Modal, Select, Row, Col, Button, Popconfirm, Icon, message} from "antd";
+import {Form, Card, Input, Table, Divider, Modal, Select,
+ Row, Col, Button, Popconfirm, Icon, message} from "antd";
 import {connect} from "dva";
 import {timeTrans, hasPermission} from "@/utils/globalTools"
 

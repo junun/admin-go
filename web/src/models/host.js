@@ -25,6 +25,8 @@ export default {
     hostSize: 10,
     Rid: 0,
     Name: '',
+    Status: 0,
+    Source: '',
 
     hostListByAppId:[],
     hostListByAppIdLen:0
@@ -41,10 +43,13 @@ export default {
     updateHostPage(state, { payload }) {
       return {
         ...state,
+        hostList: [],
         hostPage: payload.page,
         hostSize: payload.pageSize && payload.pageSize || 10,
         Rid : payload.Rid && payload.Rid || 0,
         Name : payload.Name && payload.Name ||  '',
+        Source : payload.Source && payload.Source ||  '',
+        Status: payload.Status && payload.Status || 0,
       }
     },
     updateHostList(state, { payload }){
@@ -134,13 +139,15 @@ export default {
         });
       }
       const state = yield select(state => state.host);
-      const {hostPage, hostSize, Rid, Name} = state;
+      const {hostPage, hostSize, Rid, Name, Status, Source} = state;
  
       const query = {
         page: hostPage,
         pagesize: hostSize,
         Rid : Rid,
         Name : Name,
+        Source: Source,
+        Status: Status
       };
 
       const response = yield call(getHost, query);

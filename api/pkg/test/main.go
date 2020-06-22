@@ -3,25 +3,45 @@ package main
 import (
 	"fmt"
 	"github.com/robfig/cron/v3"
+	"strconv"
 )
 
 func main() {
 
-	var err = fmt.Errorf("%s", "the error test for fmt.Errorf")
-	fmt.Println(err)
+	str1 := "4.75387ms"
 
+	fmt.Println(strconv.Atoi(str1))
 
-	i := 0
-	defer fmt.Println("a:", i)
-	//闭包调用，将外部i传到闭包中进行计算，不会改变i的值，如上边的例3
-	defer func(i int) {
-		fmt.Println("b:", i)
-	}(i)
-	//闭包调用，捕获同作用域下的i进行计算
-	defer func() {
-		fmt.Println("c:", i)
-	}()
-	i++
+//	startTime 	:= time.Now()
+//	fmt.Println(admin.CheckIfLocalIp("127.0.0.1"))
+//
+//	cmd := `
+//echo "hello world"
+//who
+//ifconfig
+//`
+//	util.ExecRuntimeCmd(cmd)
+//
+//	fmt.Println(time.Since(startTime).String())
+	//str := "1"
+	//a, _ := strconv.Atoi(str)
+	//fmt.Println(a)
+	//
+	//var err = fmt.Errorf("%s", "the error test for fmt.Errorf")
+	//fmt.Println(err)
+	//
+	//
+	//i := 0
+	//defer fmt.Println("a:", i)
+	////闭包调用，将外部i传到闭包中进行计算，不会改变i的值，如上边的例3
+	//defer func(i int) {
+	//	fmt.Println("b:", i)
+	//}(i)
+	////闭包调用，捕获同作用域下的i进行计算
+	//defer func() {
+	//	fmt.Println("c:", i)
+	//}()
+	//i++
 	//res := ""
 	//page, _ := com.StrTo(res).Int()
 	//fmt.Println(page)

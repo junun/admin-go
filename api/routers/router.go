@@ -51,6 +51,8 @@ func InitRouter() *gin.Engine {
 	//{
 	//}
 
+	r.GET("/admin/test", admin.Test)
+
 	adminv1 := r.Group("/admin", middleware.TokenAuthMiddleware())
 	{
 		// 用户登录
@@ -146,6 +148,17 @@ func InitRouter() *gin.Engine {
 		//adminv1.PUT("/deploy/app/:id/undo/:status", admin.PutAppDeployUndo)
 		adminv1.GET("/deploy/app/:id/branch", admin.GetGitBranch)
 		adminv1.GET("/deploy/app/:id/commit/:branch", admin.GetGitCommit)
+
+		adminv1.GET("/notify", admin.GetNotify)
+		adminv1.PATCH("/notify", admin.PatchNotify)
+
+		adminv1.GET("/schedule", admin.GetJobList)
+		adminv1.PATCH("/schedule", admin.PatchJobStatus)
+		adminv1.POST("/schedule", admin.AddJob)
+		adminv1.PUT("/schedule/:id", admin.PutJob)
+		adminv1.DELETE("/schedule/:id", admin.DelJob)
+		adminv1.GET("/schedule/:id", admin.GetJobHisById)
+		adminv1.GET("/schedule/:id/info", admin.GetJobInfo)
 	}
 
 	return r

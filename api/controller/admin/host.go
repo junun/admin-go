@@ -197,17 +197,22 @@ func GetHost(c *gin.Context)  {
 	//	return
 	//}
 
-	var roles []models.Host
+	var hosts []models.Host
 	var count int
 	maps := make(map[string]interface{})
 	data := make(map[string]interface{})
 
 
-	rid, _ 	:= com.StrTo(c.Query("Rid")).Int()
-	name 	:= c.Query("Name")
+	rid, _ 		:= com.StrTo(c.Query("Rid")).Int()
+	status, _ 	:= com.StrTo(c.Query("Status")).Int()
+	name 		:= c.Query("Name")
 
 	if rid != 0 {
 		maps["Rid"] = rid
+	}
+
+	if status != 0 {
+		maps["Status"] = status
 	}
 
 	if name != "" {
@@ -215,11 +220,24 @@ func GetHost(c *gin.Context)  {
 	}
 
 	models.DB.Model(&models.Host{}).Where(maps).
-		Offset(util.GetPage(c)).Limit(util.GetPageSize(c)).Find(&roles)
+		Offset(util.GetPage(c)).Limit(util.GetPageSize(c)).Find(&hosts)
 
 	models.DB.Model(&models.Host{}).Where(maps).Count(&count)
 
-	data["lists"] = roles
+	// 定时任务增加id 为0 本机选项
+	if  c.Query("Source") == "schedule" {
+
+		hostLocal := models.Host{
+			Name: "本机",
+			Addres: "127.0.0.1",
+			Port: 22,
+		}
+		hosts = append(hosts, hostLocal);
+		count++
+	}
+
+
+	data["lists"] = hosts
 	data["total"] = count
 
 	util.JsonRespond(200, "", data, c)
@@ -301,7 +319,6 @@ func PutHost(c *gin.Context)  {
 		util.JsonRespond(500, "Invalid Edit Host Data", "", c)
 		return
 	}
-
 
 	models.DB.Find(&host, c.Param("id"))
 

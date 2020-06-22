@@ -48,6 +48,23 @@ definitions:
       tid:
         type: integer
     type: object
+  admin.DomainCertResource:
+    properties:
+      channel:
+        type: string
+      desc:
+        type: string
+      did:
+        type: integer
+      endTime:
+        type: string
+      name:
+        type: string
+      startTime:
+        type: string
+      status:
+        type: integer
+    type: object
   admin.DomainInfoResource:
     properties:
       channel:
@@ -101,6 +118,37 @@ definitions:
         type: string
       name:
         type: string
+    type: object
+  admin.JobPatchResource:
+    properties:
+      active:
+        description: 0 暂停，1 启用
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  admin.JobResource:
+    properties:
+      command:
+        type: string
+      desc:
+        type: string
+      endTime:
+        type: string
+      hostIds:
+        type: string
+      isMore:
+        type: integer
+      name:
+        type: string
+      spec:
+        type: string
+      startTime:
+        type: string
+      triggerType:
+        type: integer
     type: object
   admin.LoginResource:
     properties:
@@ -200,7 +248,7 @@ definitions:
       tokenExpired:
         type: integer
     type: object
-host: 127.0.0.1:8080
+host: 127.0.0.1:9090
 info:
   contact:
     email: junun717@gmail.com
@@ -820,6 +868,35 @@ paths:
       summary: 应用变量修改
       tags:
       - 应用配置
+  /admin/demo/cert:
+    post:
+      description: 证书新增
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 证书信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.DomainCertResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 证书新增
+      tags:
+      - 域名管理
   /admin/demo/info:
     post:
       description: 域名新增
@@ -989,6 +1066,90 @@ paths:
       summary: 应用发布审核
       tags:
       - 应用发布
+  /admin/domain/cert:
+    get:
+      description: 证书列表
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 证书列表
+      tags:
+      - 域名管理
+  /admin/domain/cert/{id}:
+    delete:
+      description: 证书删除
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 证书ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 证书删除
+      tags:
+      - 域名管理
+    put:
+      description: 证书修改
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 证书ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 证书信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.DomainCertResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 证书修改
+      tags:
+      - 域名管理
   /admin/domain/info:
     get:
       description: 域名列表
@@ -1557,6 +1718,29 @@ paths:
       summary: 一级菜单修改
       tags:
       - 菜单管理
+  /admin/notify:
+    get:
+      description: 通知列表
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 通知列表
+      tags:
+      - 通知管理
   /admin/perms:
     get:
       description: 权限列表
@@ -1860,6 +2044,179 @@ paths:
       summary: 添加/修改角色权限
       tags:
       - 角色管理
+  /admin/schedule:
+    get:
+      description: 任务列表
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 任务列表
+      tags:
+      - 任务计划
+    patch:
+      description: 激活/禁用任务
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Job信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.JobPatchResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 激活/禁用任务
+      tags:
+      - 任务计划
+    post:
+      description: 激活/禁用任务
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Job信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.JobResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 激活/禁用任务
+      tags:
+      - 任务计划
+  /admin/schedule/{id}:
+    get:
+      description: 任务历史记录
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 任务ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 任务历史记录
+      tags:
+      - 任务计划
+    put:
+      description: 任务修改
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 任务ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Job信息
+        in: body
+        name: Data
+        required: true
+        schema:
+          $ref: '#/definitions/admin.JobResource'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 任务修改
+      tags:
+      - 任务计划
+  /admin/schedule/{id}/info:
+    get:
+      description: 任务详情
+      parameters:
+      - description: token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 任务调度器类型
+        in: query
+        name: Type
+        required: true
+        type: string
+      - description: 任务ID或者任务历史记录id
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"code": 200, "message": "", "data": {}}'
+          schema:
+            type: string
+        "500":
+          description: 'code": 500, "message": "", "data": {}}'
+          schema:
+            type: string
+      summary: 任务详情
+      tags:
+      - 任务计划
   /admin/submenus:
     get:
       description: 二级菜单列表

@@ -5,10 +5,42 @@
   font-weight: 600;
 }
 
+.trigger{
+  display: block;
+  font-size: 20px;
+  line-height: 64px;
+  cursor: pointer;
+  transition: all 0.3s, padding 0s;
+  padding: 0 24px;
+  float: right;
+}
+
 .userMenu {
   display: block;
   float: right;
 }
 .userMenu span {
   margin-left: 5px;
+}
+
+.notify {
+    width: 350px;
+    padding: 0;
+}
+.notify :global(.ant-dropdown-menu-item:hover) {
+    background-color: #fff;
+}
+.notifyItem {
+    align-items: center;
+    cursor: pointer;
+    padding: 12px 24px;
+}
+.notifyItem:hover {
+    background-color: rgb(233, 247, 254);
+}
+.notifyFooter {
+    line-height: 46px;
+    text-align: center;
+    cursor: pointer;
+    border-top: 1px solid #e8e8e8;
 }

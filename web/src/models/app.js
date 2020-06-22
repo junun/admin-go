@@ -1,5 +1,6 @@
-import { getMenus} from '@/services/user';
+import { getMenus, getNotify, patchNotify} from '@/services/user';
 import router from 'umi/router'
+import { message } from 'antd';
 
 export default {
   namespace: 'app',
@@ -7,6 +8,7 @@ export default {
   state: {
     menu: [],
     user: {},
+    notifies: [],
   },
   effects: {
     *getMenu(payload, { call, put, select }) {
@@ -24,6 +26,23 @@ export default {
         payload: response.data.lists,
       });
     },
+    *getNotify(payload, { call, put, select }){
+      const response = yield call(getNotify);
+      yield put({
+        type: 'updateNotify',
+        payload: response.data.lists,
+      });
+    },
+    *patchNotify({ payload }, { call, put, select }){
+      const response = yield call(patchNotify, payload);
+      if (response && response.code == 200) {
+        // yield put({
+        //   type: 'getNotify',
+        // });
+      } else {
+        message.error(response.message);
+      }
+    },
   },
   reducers: {
     updateMenu(state, { payload: menu }) {
@@ -37,6 +56,12 @@ export default {
         ...state,
         user: payload,
       }
+    },
+    updateNotify(state, { payload: notifies }) {
+      return {
+        ...state,
+        notifies,
+      };
     },
   },
   subscriptions: {

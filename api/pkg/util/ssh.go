@@ -174,9 +174,9 @@ func ExecuteCmd(cmd string, cli *ssh.Client) (string, error) {
 	var stdoutBuf bytes.Buffer
 	session.Stdout = &stdoutBuf
 
-	err := session.Run(command)
-	if err != nil {
-		return stdoutBuf.String(), err
+	e 	:= session.Run(command)
+	if e != nil {
+		return stdoutBuf.String(), e
 	}
 
 	return stdoutBuf.String(), nil
@@ -374,7 +374,6 @@ func ExecRuntimeCmdToWs(cmd, path string, ws  *websocket.Conn) error {
 	defer outw.Close()
 
 	cmdArgs 	:= strings.Fields(cmd)
-
 	command 	:= exec.Command(cmdArgs[0], cmdArgs[1:len(cmdArgs)]...)
 	command.Dir	= path
 
@@ -404,8 +403,39 @@ func ExecRuntimeCmdToWs(cmd, path string, ws  *websocket.Conn) error {
 		return e
 	}
 
-
 	return nil
+}
+
+func ExecRuntimeCmd(command string) (error, string) {
+	var message string
+	outr, outw, e 	:= os.Pipe()
+	if e 	!= nil {
+		return e, ""
+	}
+	defer outr.Close()
+	defer outw.Close()
+
+	cmd := exec.Command("/bin/sh", "-c", command)
+
+	stdout, _ 	:= cmd.StdoutPipe()
+	cmd.Stderr 	= cmd.Stdout
+	if e = cmd.Start(); e != nil {
+		return e, ""
+	}
+
+	// Create a scanner which scans stdout in a line-by-line fashion
+	scanner := bufio.NewScanner(stdout)
+
+	//scanner.Split(bufio.ScanWords)
+	for scanner.Scan() {
+		m := scanner.Text()
+		if message != "" {
+			message = message + "\n" + m
+		}
+		message = message  + m
+	}
+
+	return  nil, message
 }
 
 func ExecCmdBySshToWs(cmd string, cli *ssh.Client, ws *websocket.Conn)  {

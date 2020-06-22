@@ -3,3 +3,4 @@
 /runtime/*
 /.idea/
 /vendor/
+/conf/debug.ini

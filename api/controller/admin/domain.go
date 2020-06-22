@@ -4,6 +4,7 @@ import (
 	"api/middleware"
 	"api/models"
 	"api/pkg/util"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"strings"
 	"time"
@@ -353,4 +354,55 @@ func DelDomainCret(c *gin.Context)  {
 	}
 
 	util.JsonRespond(200, "删除证书成功", "", c)
+}
+
+// 定时任务 每天检查域名和证书是否到期
+// 到期前一个月开始每天发送通知，提醒续费或者更新证书
+func CheckDomainAndCret()   {
+	var domain []models.DomainInfo
+	var cert []models.CertificateInfo
+
+	models.DB.Model(&models.DomainInfo{}).Where("status=1").Find(&domain)
+	models.DB.Model(&models.CertificateInfo{}).Where("status=1").Find(&cert)
+
+	if len(domain) == 0 && len(cert) == 0 {
+		return
+	}
+
+	now 			:= time.Now()
+	nowAddOneMonth 	:= now.AddDate(0, 1, 0)
+	if len(domain) > 0 {
+		for _,v := range domain {
+			if (v.EndTime.Before(nowAddOneMonth)) {
+				// 执行消息通知逻辑
+				// text message
+				fmt.Println(v.Name)
+				textReq := models.CreateOapiRobotSendTextRequest(
+					"@" + models.DingUser + "域名" + v.Name + "快要到期了，请及时处理",
+					models.DingList,
+					false)
+				_, e := models.SecretDing.Execute(textReq)
+				if e != nil {
+					models.MakeNotify(1, 2,"发送通知异常" + e.Error(),"域名" + v.Name + "快要到期了，请及时处理","" )
+				}
+			}
+		}
+	}
+
+	if len(cert) > 0 {
+		for _,v := range cert {
+			if (v.EndTime.Before(nowAddOneMonth)) {
+				// 执行消息通知逻辑
+				// text message
+				textReq := models.CreateOapiRobotSendTextRequest(
+					"@" + models.DingUser + "SSl证书" + v.Name + "快要到期了，请及时处理",
+					models.DingList,
+					false)
+				_, e 	:= models.SecretDing.Execute(textReq)
+				if e != nil {
+					models.MakeNotify(1, 2,"发送通知异常","SSl证书" + v.Name + "快要到期了，请及时处理","" )
+				}
+			}
+		}
+	}
 }

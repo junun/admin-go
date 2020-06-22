@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -139,4 +142,27 @@ func CopySymLink(source, dest string) error {
 		return err
 	}
 	return os.Symlink(link, dest)
+}
+
+func ReturnLocalIpAddress() []string {
+	var ips []string
+
+	//考虑 127.0.0.1 情况
+	ips = append(ips, "127.0.0.1")
+	ifaces, _ := net.Interfaces()
+	for _, i := range ifaces {
+		addrs, _ := i.Addrs()
+		for _, addr := range addrs {
+			match, _ := regexp.MatchString(`^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+$`, addr.String())
+			if !match {
+				continue
+			}
+			slit := strings.Split(addr.String(), "/")
+			if i.Flags.String() == "up|broadcast|multicast" {
+				ips = append(ips, slit[0])
+			}
+		}
+	}
+
+	return ips
 }

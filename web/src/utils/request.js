@@ -36,7 +36,7 @@ const codeMessage = {
 // };
 
 const checkStatus = response => {
-  if (response.status >= 200 && response.status < 300) {
+  if (response.status >= 200 && response.status < 300 || response.status == 500) {
     return response;
   }
   const errortext = codeMessage[response.status] || response.statusText;
@@ -94,6 +94,7 @@ function request(url, options) {
   if (
     newOptions.method === 'POST' ||
     newOptions.method === 'PUT' ||
+    newOptions.method === 'PATCH' ||
     newOptions.method === 'DELETE'
   ) {
     if (!(newOptions.body instanceof FormData)) {
@@ -198,8 +199,12 @@ function httpPut(url, params) {
   return request(url, {method: 'PUT', body: params})
 }
 
+function httpPatch(url, params) {
+  return request(url, {method: 'PATCH', body: params})
+}
+
 function httpDel(url, params) {
   return request(url, {method: 'DELETE'})
 }
 
-export {request, httpGet, httpPost, httpPut, httpDel};
+export {request, httpGet, httpPost, httpPatch, httpPut, httpDel};

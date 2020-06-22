@@ -1,3 +1,4 @@
+import {message} from "antd";
 
 // 为url 添加前缀
 function urlComplement(uri){
@@ -99,5 +100,16 @@ function cleanCommand(text) {
   return text ? text.replace(/\r\n/g, '\n') : ''
 }
 
+function isEmpty(obj) {
+  for(var prop in obj) {
+    if(obj.hasOwnProperty(prop)) {
+      return false;
+    }
+  }
 
-export { urlComplement, timeTrans, timeDatetimeTrans, timeDatePicker, deepCopy, compareArray, hasPermission, cleanCommand};
+  return JSON.stringify(obj) === JSON.stringify({});
+}
+
+export { urlComplement, timeTrans, timeDatetimeTrans,
+ timeDatePicker, deepCopy, compareArray, hasPermission,
+ isEmpty, cleanCommand};
