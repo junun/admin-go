@@ -4,6 +4,7 @@ import (
 	"api/middleware"
 	"api/models"
 	"api/pkg/util"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/unknwon/com"
 	"strings"
@@ -36,7 +37,11 @@ type DeployExtendResource struct {
 	HostIds         string   `form:"HostIds"`
 	RepoUrl         string   `form:"RepoUrl"`
 	Tag             string   `form:"Tag"`
+	Extend			int		 `form:"Extend"`
 	Versions        int      `form:"Versions"`
+	NotifyId		int      `form:"NotifyId"`
+	FilterRule  	string   `form:"FilterRule"`
+	CustomEnvs  	string   `form:"CustomEnvs"`
 	PreCode  		string   `form:"PreCode"`
 	PostCode  		string   `form:"PostCode"`
 	PreDeploy       string   `form:"PreDeploy"`
@@ -50,6 +55,14 @@ type AppValueResource struct {
 	Name    	string    	`form:"Name"`
 	Value    	string    	`form:"Value"`
 	Desc 		string    	`form:"Desc"`
+}
+
+type EnvApp struct {
+	Id 				int 				`json:"id"`
+	EnvId			int					`json:"env_id"`
+	EnvName      	string				`json:"env_name"`
+	AppName      	string				`json:"app_name"`
+	Children    	[]EnvApp 			`json:"children"`
 }
 
 // @Tags 应用配置
@@ -197,6 +210,46 @@ func DelConfigEnv(c *gin.Context)  {
 	}
 
 	util.JsonRespond(200, "删除应用类型成功", "", c)
+}
+
+// @Tags 应用配置
+// @Description 环境应用列表
+// @Summary  环境应用列表
+// @Produce  json
+// @Param Authorization header string true "token"
+// @Success 200 {string} string {"code": 200, "message": "", "data": {}}
+// @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
+// @Router /admin/env/app [get]
+func GetEnvApp(c *gin.Context)  {
+	var app []EnvApp
+	data := make(map[int]EnvApp)
+
+	models.DB.Table("app").
+		Select("app.id, app.name as app_name, config_env.id as env_id, config_env.name as env_name").
+		Joins("left join config_env on config_env.id = app.env_id").
+		Find(&app)
+
+	//models.DB.Model(&models.App{}).Find(&app)
+	if len(app) > 0 {
+		for _, v := range app {
+			if _, ok := data[v.EnvId]; !ok {
+				tmp := v
+				tmp.Children = append(tmp.Children, v)
+				data[v.EnvId] = tmp
+				continue
+			}
+			tmp := data[v.EnvId]
+			tmp.Children = append(tmp.Children, v)
+			data[v.EnvId] = tmp
+		}
+	}
+
+	var res []EnvApp
+	for _, v := range data {
+		res = append(res, v)
+	}
+
+	util.JsonRespond(200, "", res, c)
 }
 
 // @Tags 应用配置
@@ -764,11 +817,15 @@ func AddDeployExtend(c *gin.Context)  {
 	var data DeployExtendResource
 	var det models.DeployExtend
 
-	err := c.BindJSON(&data)
-	if err != nil {
-		util.JsonRespond(500, "Invalid Add DeployExtend Data", "", c)
+	e := c.BindJSON(&data)
+	if e != nil {
+		util.JsonRespond(500, e.Error(), "", c)
 		return
 	}
+
+	fmt.Println(data.PreCode)
+
+	fmt.Println(data.PreDeploy)
 
 	// 角色名唯一性检查
 	models.DB.Model(&models.DeployExtend{}).
@@ -779,13 +836,26 @@ func AddDeployExtend(c *gin.Context)  {
 		return
 	}
 
+	if data.CustomEnvs != "" {
+		e , customEnvs := util.ParseEnvs(data.CustomEnvs)
+		if e != nil {
+			util.JsonRespond(500, e.Error(), "", c)
+			return
+		}
+		data.CustomEnvs = customEnvs
+	}
+
 	det = models.DeployExtend{
 		Aid: data.Aid,
 		TemplateName: data.TemplateName,
 		EnableCheck: data.EnableCheck,
 		HostIds: data.HostIds,
+		Extend: data.Extend,
 		RepoUrl: data.RepoUrl,
+		NotifyId: data.NotifyId,
 		Versions: data.Versions,
+		FilterRule: data.FilterRule,
+		CustomEnvs: data.CustomEnvs,
 		PreCode: data.PreCode,
 		PostCode: data.PostCode,
 		PreDeploy: data.PreDeploy,
@@ -798,7 +868,7 @@ func AddDeployExtend(c *gin.Context)  {
 		det.Tag = data.Tag
 	}
 
-	e := models.DB.Save(&det).Error
+	e 	= models.DB.Save(&det).Error
 	if e != nil {
 		util.JsonRespond(500, e.Error(), "", c)
 		return
@@ -843,13 +913,27 @@ func PutDeployExtend(c *gin.Context) {
 		return
 	}
 
+	customEnvs := data.CustomEnvs
+	if customEnvs != "" {
+		e , str := util.ParseEnvs(customEnvs)
+		if e != nil {
+			util.JsonRespond(500, e.Error(), "", c)
+			return
+		}
+		customEnvs = str
+	}
+
+	fmt.Println(customEnvs)
+
 	e := models.DB.Exec("update deploy_extend set aid = ?, template_name = ?," +
-		"enable_check = ?, tag = ?, host_ids = ? , repo_url = ?," +
-		"versions = ?, pre_code = ?, post_code = ?, pre_deploy = ? , " +
-		"post_deploy = ?, dst_dir = ?, dst_repo = ? where dtid = ? ",
+		"enable_check = ?, tag = ?, host_ids = ? , repo_url = ?, versions = ?," +
+		"pre_code = ?, post_code = ?, pre_deploy = ? , post_deploy = ?," +
+		"dst_dir = ?, dst_repo = ?, filter_rule = ?, custom_envs = ?, " +
+		"extend = ?, notify_id = ?  where dtid = ? ",
 		data.Aid, data.TemplateName, data.EnableCheck, data.Tag, data.HostIds, data.RepoUrl,
 		data.Versions, data.PreCode, data.PostCode, data.PreDeploy, data.PostDeploy,
-		strings.TrimSpace(data.DstDir),strings.TrimSpace(data.DstRepo), c.Param("id")).Error
+		strings.TrimSpace(data.DstDir),strings.TrimSpace(data.DstRepo),
+		data.FilterRule, customEnvs, data.Extend, data.NotifyId, c.Param("id")).Error
 
 	if e != nil {
 		util.JsonRespond(500, e.Error(), "", c)
@@ -871,6 +955,18 @@ func PutDeployExtend(c *gin.Context) {
 func DelDeployExtend(c *gin.Context) {
 	if !middleware.PermissionCheckMiddleware(c,"config-app-del") {
 		util.JsonRespond(403, "请求资源被拒绝", "", c)
+		return
+	}
+
+	// 检查是否有未完成上线的依赖
+	var deply []models.AppDeploy
+	models.DB.Model(&models.AppDeploy{}).
+		Where("tid = ?", c.Param("id")).
+		Where("status in (?)", []int{1,2}).
+		Find(&deply)
+
+	if len(deply) > 0 {
+		util.JsonRespond(500, "资源正在走发布流程，请先删除发布请求信息！", "", c)
 		return
 	}
 
@@ -914,4 +1010,63 @@ func GetAppTemplate(c *gin.Context)  {
 
 
 	util.JsonRespond(200, "", data, c)
+}
+
+// @Tags 应用配置
+// @Description 应用初始化
+// @Summary  应用初始化
+// @Produce  json
+// @Param Authorization header string true "token"
+// @Param id path int true "应用ID"
+// @Success 200 {string} string {"code": 200, "message": "", "data": {}}
+// @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
+// @Router /admin/sync/request/{id} [get]
+func AppSyncRequest(c *gin.Context)  {
+	if !middleware.PermissionCheckMiddleware(c,"config-app-sync") {
+		util.JsonRespond(403, "请求资源被拒绝", "", c)
+		return
+	}
+
+	id 	:= c.Param("id")
+	var app models.App
+	models.DB.Model(&models.App{}).
+		Where("id = ?", id).
+		Find(&app)
+
+	if app.ID == 0 {
+		util.JsonRespond(500, "未找到指定应用", "", c)
+		return
+	}
+
+	var hostapp []models.HostApp
+	models.DB.Model(&models.HostApp{}).
+		Where("aid = ?", id).
+		Find(&hostapp)
+
+	if  len(hostapp) == 0 {
+		util.JsonRespond(500, "该应用没有绑定主机，请先绑定到对应主机上", "", c)
+		return
+	}
+
+	models.DB.Model(&models.HostApp{}).
+		Where("aid = ?", id).
+		Where("status = 0").
+		Find(&hostapp)
+
+	if  len(hostapp) == 0 {
+		util.JsonRespond(500, "该应用已经初始过，请勿重复初始化", "", c)
+		return
+	}
+
+	// 检查项目变量
+	var value []models.AppSyncValue
+	models.DB.Model(&models.AppSyncValue{}).
+		Where("aid = ?", app.ID).
+		Find(&value)
+	if len(value) <= 0 {
+		util.JsonRespond(500, "该项目没有设置环境变量，请先设置", "", c)
+		return
+	}
+
+	util.JsonRespond(200, "", "", c)
 }

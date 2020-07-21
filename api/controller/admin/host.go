@@ -6,9 +6,12 @@ import (
 	"api/pkg/setting"
 	"api/pkg/util"
 	"fmt"
-	"github.com/unknwon/com"
+	"github.com/360EntSecGroup-Skylar/excelize"
 	"github.com/gin-gonic/gin"
+	"github.com/unknwon/com"
 	"net/http"
+	"strconv"
+	"strings"
 )
 
 type HostRoleResource struct {
@@ -21,6 +24,7 @@ type HostResource struct {
 	Rid			int			`form:"Rid"`
 	EnvId		int 		`form:"EnvId"`
 	ZoneId		int			`form:"ZoneId"`
+	Enable		int			`form:"Enable"`
 	Name    	string    	`form:"Name"`
 	Addres    	string    	`form:"Addres"`
 	Port    	int    		`form:"Port"`
@@ -34,6 +38,14 @@ type HostAppResource struct {
 	Hid			int			`form:"Hid"`
 	Aid			int			`form:"Aid"`
 	Desc 		string    	`form:"Desc"`
+}
+
+type EnvHost struct {
+	Id 				int 				`json:"id"`
+	EnvId			int					`json:"env_id"`
+	EnvName      	string				`json:"env_name"`
+	HostName      	string				`json:"host_name"`
+	Children    	[]EnvHost 			`json:"children"`
 }
 
 // @Tags 主机管理
@@ -184,6 +196,45 @@ func DelHostRole(c *gin.Context)  {
 }
 
 // @Tags 主机管理
+// @Description 环境主机列表
+// @Summary  环境主机列表
+// @Produce  json
+// @Param Authorization header string true "token"
+// @Success 200 {string} string {"code": 200, "message": "", "data": {}}
+// @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
+// @Router /admin/env/host [get]
+func GetEnvHost(c *gin.Context)  {
+	var host []EnvHost
+	data := make(map[int]EnvHost)
+
+	models.DB.Table("host").
+		Select("host.id, host.name as host_name, config_env.id as env_id, config_env.name as env_name").
+		Joins("left join config_env on config_env.id = host.env_id").
+		Find(&host)
+
+	if len(host) > 0 {
+		for _, v := range host {
+			if _, ok := data[v.EnvId]; !ok {
+				tmp := v
+				tmp.Children = append(tmp.Children, v)
+				data[v.EnvId] = tmp
+				continue
+			}
+			tmp := data[v.EnvId]
+			tmp.Children = append(tmp.Children, v)
+			data[v.EnvId] = tmp
+		}
+	}
+
+	var res []EnvHost
+	for _, v := range data {
+		res = append(res, v)
+	}
+
+	util.JsonRespond(200, "", res, c)
+}
+
+// @Tags 主机管理
 // @Description 主机列表
 // @Summary  主机列表
 // @Produce  json
@@ -266,6 +317,18 @@ func AddHost(c *gin.Context)  {
 		return
 	}
 
+	//主机唯一性检查
+	models.DB.Model(&models.Host{}).
+		Where("addres = ? ", data.Addres).
+		Where("port = ?", data.Port).
+		Where("username = ?", data.Username).
+		Find(&host)
+
+	if host.ID > 0 {
+		util.JsonRespond(500, "该主机已经存在，请检查！", "", c)
+		return
+	}
+
 	// 验证主机信息并 copy 公钥
 	if !util.ValidHosh(data.Addres, data.Port, data.Username, data.Password ) {
 		util.JsonRespond(500, "Auth Fail", "", c)
@@ -277,6 +340,7 @@ func AddHost(c *gin.Context)  {
 		Name: data.Name,
 		Rid: data.Rid,
 		EnvId: data.EnvId,
+		Enable: data.Enable,
 		ZoneId: data.ZoneId,
 		Username: data.Username,
 		Addres: data.Addres,
@@ -287,7 +351,6 @@ func AddHost(c *gin.Context)  {
 	}
 
 	e := models.DB.Save(&host).Error
-
 	if e != nil {
 		util.JsonRespond(500, e.Error(), "", c)
 		return
@@ -320,13 +383,26 @@ func PutHost(c *gin.Context)  {
 		return
 	}
 
+	//主机唯一性检查
+	models.DB.Model(&models.Host{}).
+		Where("addres = ? ", data.Addres).
+		Where("port = ?", data.Port).
+		Where("username = ?", data.Username).
+		Where("id ！= ？", c.Param("id")).
+		Find(&host)
+
+	if host.ID > 0 {
+		util.JsonRespond(500, "该主机已经存在，请检查！", "", c)
+		return
+	}
+
 	models.DB.Find(&host, c.Param("id"))
 
 	uid,_ 	:= c.Get("Uid")
-
 	host.Name = data.Name
 	host.Rid = data.Rid
 	host.EnvId = data.EnvId
+	host.Enable = data.Enable
 	host.ZoneId = data.ZoneId
 	host.Username = data.Username
 	host.Addres = data.Addres
@@ -335,6 +411,11 @@ func PutHost(c *gin.Context)  {
 	host.Status = data.Status
 	host.Desc = data.Desc
 
+	// 验证主机信息
+	if !util.ValidHosh(data.Addres, data.Port, data.Username, "") {
+		util.JsonRespond(500, "Auth Fail", "", c)
+		return
+	}
 
 	e := models.DB.Save(&host).Error
 	if e != nil {
@@ -379,6 +460,118 @@ func DelHost(c *gin.Context)  {
 	util.JsonRespond(200, "删除主机成功", "", c)
 }
 
+// @Tags 主机管理
+// @Description 主机导入
+// @Summary  主机导入
+// @Produce  json
+// @Param Authorization header string true "token"
+// @Param Data body admin.HostResource true "主机信息"
+// @Success 200 {string} string {"code": 200, "message": "", "data": {}}
+// @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
+// @Router /admin/host/import [post]
+func ImportHost(c *gin.Context)  {
+	if !middleware.PermissionCheckMiddleware(c,"host-import") {
+		util.JsonRespond(403, "请求资源被拒绝", "", c)
+		return
+	}
+	data 	:= make(map[string]interface{})
+
+	//file, header, e := c.Request.FormFile("file")
+	file, _, e := c.Request.FormFile("file")
+	defer file.Close()
+	if e != nil {
+		util.JsonRespond(http.StatusBadRequest, "文件上传失败", "", c)
+		return
+	}
+
+	f,e := excelize.OpenReader(file)
+	if e != nil {
+		util.JsonRespond(http.StatusBadRequest, "文件读取失败", "", c)
+		return
+	}
+
+	var host, isExit models.Host
+	invalid	:= []int{}
+	skip	:= []int{}
+	fail	:= []int{}
+	dbfail	:= []int{}
+	success := []int{}
+	rows:= f.GetRows("Sheet1")
+	fmt.Println(len(rows))
+	for k, row := range rows {
+		// 第1行是表头 略过
+		if k == 0 {
+			continue
+		}
+		for _, colCell := range row {
+			if colCell == "" {
+				invalid = append(invalid, k)
+			}
+			break
+		}
+
+		host.Rid, _ 	= strconv.Atoi(row[0])
+		host.ZoneId,_ 	= strconv.Atoi(row[1])
+		host.EnvId,_ 	= strconv.Atoi(row[2])
+		host.Name		= strings.TrimSpace(row[3])
+		host.Addres		= strings.TrimSpace(row[4])
+		host.Port,_		= strconv.Atoi(row[5])
+		host.Username	= strings.TrimSpace(row[6])
+		host.Enable,_	= strconv.Atoi(row[8])
+		host.Desc		= strings.TrimSpace(row[9])
+		password		:= strings.TrimSpace(row[7])
+
+		models.DB.Model(&models.Host{}).
+			Where("addres = ? ", host.Addres).
+			Where("port = ?", host.Port).
+			Where("username = ?", host.Username).
+			Find(&isExit)
+
+		if isExit.ID > 0 {
+			skip = append(skip, k)
+			continue
+		}
+
+		// 验证主机信息
+		if !util.ValidHosh(host.Addres, host.Port, host.Username, password) {
+			fail = append(fail, k)
+			continue
+		}
+
+		e := models.DB.Save(&host).Error
+		if e != nil {
+			dbfail 	= append(dbfail, k)
+			continue
+		}
+
+		success = append(success, k)
+	}
+
+	//content, e := ioutil.ReadAll(file)
+	//if e != nil {
+	//	util.JsonRespond(http.StatusBadRequest, "文件读取失败", "", c)
+	//	return
+	//}
+
+	//fmt.Println(string(content))
+
+	//f, e := os.OpenFile("/tmp/"+header.Filename, os.O_WRONLY|os.O_CREATE, 0644)
+	//if e != nil {
+	//	util.JsonRespond(http.StatusBadRequest, e.Error(), "", c)
+	//	return
+	//}
+	//defer f.Close()
+	//io.Copy(f, file)
+
+	data["invalid"] = invalid
+	data["skip"] 	= skip
+	data["fail"] 	= fail
+	data["dbfail"]	= dbfail
+	data["success"]	= success
+
+	util.JsonRespond(200, "", data, c)
+}
+
 func ConsoleHost(c *gin.Context)  {
 	token := c.Query("x-token")
 
@@ -393,6 +586,14 @@ func ConsoleHost(c *gin.Context)  {
 	if e != nil{
 		util.JsonRespond(401, "Invalid API token, please login", "", c)
 		c.Abort()
+	}
+
+	var host models.Host
+	models.DB.Find(&host, c.Param("id"))
+
+	if host.ID <= 0 {
+		util.JsonRespond(500, "Unknown Host！", "", c)
+		return
 	}
 
 	if user.IsSupper != 1 {
@@ -413,14 +614,22 @@ func ConsoleHost(c *gin.Context)  {
 			util.JsonRespond(403, "请求资源被拒绝", "", c)
 			return
 		}
-	}
 
-	var host models.Host
-	models.DB.Find(&host, c.Param("id"))
+		var envhost  models.RoleEnvHost
+		models.DB.Model(&models.RoleEnvHost{}).
+			Where("rid = ?", user.Rid).
+			Where("eid = ?", host.EnvId).
+			Find(&envhost)
 
-	if host.ID <= 0 {
-		util.JsonRespond(500, "Unknown Host！", "", c)
-		return
+		if envhost.ID == 0 {
+			util.JsonRespond(403, "请求主机资源被拒绝！", "", c)
+			return
+		}
+
+		if !util.StrArrContains(strings.Split(envhost.HostIds, ","), c.Param("id")) {
+			util.JsonRespond(403, "请求主机资源被拒绝！", "", c)
+			return
+		}
 	}
 
 	c.HTML(http.StatusOK, "web_ssh.html", gin.H{

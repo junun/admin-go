@@ -1,6 +1,6 @@
 
 import React, {Fragment, Component} from "react";
-import {Form, Card, Input, Table, Divider, Modal,
+import {Form, Card, Input, Table, Divider, Modal, Alert,
  Select, Row, Col, Button, Popconfirm, Icon, Switch, DatePicker,
  message} from "antd";
 import {hasPermission, timeDatetimeTrans} from "@/utils/globalTools"
@@ -22,6 +22,7 @@ const FormItem = Form.Item;
 class DomainPage extends React.Component {
   state = {
     visible: false,
+    loading: false,
     editCacheData: {},
   };
 
@@ -63,16 +64,18 @@ class DomainPage extends React.Component {
 
   handleOk = () => {
     const { dispatch, form: { validateFields } } = this.props;
+    this.setState({loading: true})
     validateFields((err, values) => {
       if (!err) {
         const obj = this.state.editCacheData;
         values.Status  =  values.Status ? 1 : 0
+        values.IsCert  =  values.IsCert ? 1 : 0
         if (Object.keys(obj).length) {
           if (
-            obj.Name    === values.Name &&
-            obj.Channel === values.Channel &&
-            obj.EndTime === values.EndTime &&
-            obj.Status  === values.Status &&
+            obj.CertName=== values.CertName &&
+            obj.Name    === values.Name     &&
+            obj.IsCert  === values.IsCert   &&
+            obj.Status  === values.Status   &&
             obj.Desc    === values.Desc 
           ) {
             message.warning('没有内容修改， 请检查。');
@@ -82,25 +85,26 @@ class DomainPage extends React.Component {
             dispatch({
               type: 'domain/domainEdit',
               payload: values,
-            });
-            
+            }).then(()=>{
+              this.setState({ visible: false, loading: false})
+            })
           }
         } else {
-          values.Status = values.Status ? 1 : 0
           dispatch({
             type: 'domain/domainAdd',
             payload: values,
-          });
+          }).then(()=>{
+            this.setState({ visible: false, loading: false})
+          })
         }
         // 重置 `visible` 属性为 false 以关闭对话框
-        this.setState({ visible: false });
       }
     });
   };
 
   //显示编辑界面
   handleEdit = (values) => {
-    values.title =  '编辑-' + values.name;
+    values.title =  '编辑-' + values.Name;
     this.setState({ 
       visible: true ,
       editCacheData: values
@@ -125,17 +129,16 @@ class DomainPage extends React.Component {
     title: '域名',
     dataIndex: 'Name',
   }, {
-    title: '申请渠道',
-    dataIndex: 'Channel',
-    ellipsis: true
+    title: '证书',
+    dataIndex: 'CertName',
   }, {
-    title: '申请日期',
-    dataIndex: 'StartTime',
-    'render': StartTime => timeDatetimeTrans(StartTime),
+    title: '域名到期日期',
+    dataIndex: 'DomainEndTime',
+    'render': DomainEndTime => timeDatetimeTrans(DomainEndTime),
   }, {
-    title: '到期日期',
-    dataIndex: 'EndTime',
-    'render': EndTime => timeDatetimeTrans(EndTime),
+    title: '证书到期日期',
+    dataIndex: 'CertEndTime',
+    'render': CertEndTime => timeDatetimeTrans(CertEndTime),
   }, {
     title: '状态',
     dataIndex: 'Status',
@@ -159,7 +162,7 @@ class DomainPage extends React.Component {
   }];
   
   render() {
-    const {visible, editCacheData} = this.state;
+    const {visible, editCacheData, loading} = this.state;
     const {domainList, domainListLen, domainLoading, form: { getFieldDecorator } } = this.props;
     const adddomainRple = <Button type="primary" onClick={this.showTypeAddModal} >新增域名</Button>;
     const extra = <Row gutter={16}>
@@ -170,9 +173,20 @@ class DomainPage extends React.Component {
         <Modal
           title= {editCacheData.title || "新增域名" }
           visible= {visible}
+          confirmLoading={loading}
+          width={800}
           destroyOnClose= "true"
           onOk={this.handleOk}
-          onCancel={this.handleCancel}>
+          onCancel={this.handleCancel}
+        >
+          <Alert
+            closable
+            showIcon
+            type="info"
+            style={{width: 600, margin: '0 auto 20px', color: '#31708f !important'}}
+            message="小提示"
+            description={[<div key="1">如果有证书，将会访问你设置的二级域名检测证书有效性信息</div>]} />
+
           <Form>
             <FormItem label="域名">
               {getFieldDecorator('Name', {
@@ -182,38 +196,28 @@ class DomainPage extends React.Component {
                 <Input />
               )}
             </FormItem>
-            <FormItem label="申请渠道">
-              {getFieldDecorator('Channel', {
-                initialValue: editCacheData.Channel || '',
-                rules: [{ required: true }],
-              })(
-                <Input />
-              )}
-            </FormItem>
-
-            <FormItem label="申请日期">
-              {getFieldDecorator('StartTime', {
-                initialValue: editCacheData.StartTime && moment(editCacheData.StartTime, dateFormat) || null,
-                rules: [{ required: true }],
-              })(
-                <DatePicker onChange={this.onCheckChange} />
-              )}
-            </FormItem>
-
-            <FormItem label="到期日期">
-              {getFieldDecorator('EndTime', {
-                initialValue: editCacheData.EndTime && moment(editCacheData.EndTime, dateFormat) || null,
-                rules: [{ required: true }],
-              })(
-                <DatePicker onChange={this.onCheckChange} />
-              )}
-            </FormItem>
             <FormItem label="是否有效">
               {getFieldDecorator('Status', {
                 initialValue: editCacheData.Status && true || false,
                 rules: [{ required: true }],
               })(
                 <Switch defaultChecked={editCacheData.Status && true || false} onChange={this.onCheckChange} />
+              )}
+            </FormItem>
+            <FormItem label="是否有证书">
+              {getFieldDecorator('IsCert', {
+                initialValue: editCacheData.IsCert && true || false,
+                rules: [{ required: true }],
+              })(
+                <Switch defaultChecked={editCacheData.IsCert && true || false} onChange={this.onCheckChange} />
+              )}
+            </FormItem>
+            <FormItem label="检测证书二级域名">
+              {getFieldDecorator('CertName', {
+                initialValue: editCacheData.CertName || '',
+                rules: [{ required: false }],
+              })(
+                <Input />
               )}
             </FormItem>
             <FormItem label="备注信息">

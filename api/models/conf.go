@@ -30,9 +30,13 @@ type DeployExtend struct {
 	Tag				string
 	TemplateName    string
 	EnableCheck		int
+	NotifyId		int
 	HostIds         string
 	RepoUrl         string
 	Versions        int
+	Extend			int
+	FilterRule		string
+	CustomEnvs		string
 	PreCode  		string
 	PostCode  		string
 	PreDeploy       string

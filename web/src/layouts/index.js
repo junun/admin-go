@@ -77,7 +77,7 @@ class BasicLayout extends Component {
       type: 'app/getMenu',
     });
 
-    this.fetch();
+    // this.fetch();
     this.interval = setInterval(this.fetch, 60000)
   };
 

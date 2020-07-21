@@ -23,6 +23,7 @@ type Host struct {
 	EnvId 			int
 	ZoneId			int
 	Status 			int
+	Enable   		int
 	Name      		string
 	Addres 			string
 	Port			int

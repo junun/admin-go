@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
-	"log"
 	"os"
 	"strings"
 )
@@ -21,38 +20,38 @@ func GetIdRsaPath() string {
 	return setting.AppSetting.IdRsaPath
 }
 
-func GenerateKey()  {
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		log.Fatal("Private key cannot be created.", err.Error())
-	}
-
-	publickey := &key.PublicKey
-
-	dir, _ := os.Getwd()
-	path := dir + "/" + GetIdRsaPath()
-
-	// 检查 保存公钥和私钥目录是否存在
-	_, err = os.Stat(path)
-	if os.IsNotExist(err) {
-		err := os.MkdirAll(path, os.ModePerm)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	// dump private key to file
-	err = DumpPrivateKeyFile(key, path + "id_rsa")
-	if err != nil {
-		log.Fatalf("Cannot dump private key file\n")
-	}
-
-	// dump public key to file
-	err = DumpPublicKeyFile(publickey, path + "id_rsa_pub")
-	if err != nil {
-		log.Fatalf("Cannot dump public key file\n")
-	}
-}
+//func GenerateKey()  {
+//	key, e := rsa.GenerateKey(rand.Reader, 2048)
+//	if e != nil {
+//		log.Fatal("Private key cannot be created.", e.Error())
+//	}
+//
+//	publickey := &key.PublicKey
+//
+//	dir, _ := os.Getwd()
+//	path := dir + "/" + GetIdRsaPath()
+//
+//	// 检查 保存公钥和私钥目录是否存在
+//	_, e = os.Stat(path)
+//	if os.IsNotExist(e) {
+//		err := os.MkdirAll(path, os.ModePerm)
+//		if err != nil {
+//			panic(err)
+//		}
+//	}
+//
+//	// dump private key to file
+//	e = DumpPrivateKeyFile(key, path + "id_rsa")
+//	if e != nil {
+//		log.Fatalf("Cannot dump private key file\n")
+//	}
+//
+//	// dump public key to file
+//	e = DumpPublicKeyFile(publickey, path + "id_rsa_pub")
+//	if e != nil {
+//		log.Fatalf("Cannot dump public key file\n")
+//	}
+//}
 
 // Dump private key into file
 func DumpPrivateKeyFile(privatekey *rsa.PrivateKey, filename string) error {
@@ -182,6 +181,37 @@ func LoadPublicKeyFile(keyfile string) (*rsa.PublicKey, error) {
 	return publickey, nil
 }
 
+
+func LoadPublicKeyToAuthorizedFormat(keystr string) (string, error) {
+	block, _ := pem.Decode([]byte(keystr))
+	if block == nil {
+		panic("invalid public key data")
+	}
+	if block.Type != "PUBLIC KEY" {
+		panic(fmt.Sprintf("invalid public key type : %s", block.Type))
+	}
+
+	keyInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		panic("failed to convert bytes to public key.")
+	}
+
+	key, ok := keyInterface.(*rsa.PublicKey)
+	if !ok {
+		panic("not RSA public key")
+	}
+
+	skey, err := ssh.NewPublicKey(key)
+	if (err != nil) {
+		panic("failed to convert ras key to ssh key.")
+	}
+
+	b := string(ssh.MarshalAuthorizedKey(skey))
+
+	b = strings.TrimSuffix(b, "\n")
+	return b, nil
+}
+
 func LoadPublicKeyFileToAuthorizedFormat(keyfile string) (string, error) {
 	publickey, err := ioutil.ReadFile(keyfile)
 	if err != nil {
@@ -274,4 +304,3 @@ func Decrypt(ciphertext string, privatekey *rsa.PrivateKey) (string, error) {
 
 	return string(decryptedtext), nil
 }
-

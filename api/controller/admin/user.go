@@ -3,7 +3,9 @@ package admin
 import (
 	"api/middleware"
 	"api/models"
+	"api/pkg/logging"
 	"api/pkg/util"
+	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -36,7 +38,6 @@ type UserResource struct {
 func Login(c *gin.Context)  {
 	var dataResource LoginResource
 	var user models.User
-	var val interface{}
 	var expiration  = time.Duration(86400)*time.Second
 
 	err := c.BindJSON(&dataResource)
@@ -59,24 +60,23 @@ func Login(c *gin.Context)  {
 		if !err {
 			// 记录用户验证失败次数
 			// 检查key是否存在 1: 存在， 0: 不存在
+			fmt.Println(models.Rdb.Exists(key).Val())
 			if models.Rdb.Exists(key).Val() == 1 {
 				// 获取key的值
-				val = models.GetValByKey(key)
-				res := val.(int)
-
+				num, _ := models.Rdb.Get(key).Int()
 				// 如果验证失败次数多于3次，将锁定用户
-				if res > 3 {
+				if num > 3 {
 					util.JsonRespond(401, "用户已被禁用，请联系管理员", "", c)
 					return
 				}
 
-				if err := models.SetValByKey(key, res+1, expiration); err != nil {
-					panic(err)
+				if err := models.SetValByKey(key, num+1, expiration); err != nil {
+					logging.Error(err)
 				}
 			} else {
 				// 第一次登录失败
-				if err := models.SetValByKey(key, 1, expiration); err != nil {
-					panic(err)
+				if e := models.SetValByKey(key, 1, expiration); e != nil {
+					logging.Error(err)
 				}
 			}
 			util.JsonRespond(401, "用户名或密码错误，连续3次错误将会被禁用", "", c)
@@ -104,8 +104,8 @@ func Login(c *gin.Context)  {
 			data["permissions"]	= permissions
 
 			// 登录成功
-			if err := models.SetValByKey(key, 0, expiration); err != nil {
-				panic(err)
+			if e := models.SetValByKey(key, 0, expiration); e != nil {
+				logging.Error(e)
 			}
 
 			util.JsonRespond(200, "",data, c)
@@ -260,8 +260,6 @@ func PutUser(c *gin.Context)  {
 	var user models.User
 	var data UserResource
 
-	fmt.Println(c.PostForm("Email"))
-
 	err := c.BindJSON(&data)
 	if err != nil {
 		fmt.Println(err)
@@ -295,6 +293,89 @@ func PutUser(c *gin.Context)  {
 	}
 
 	util.JsonRespond(200, "修改用户成功", "", c)
+}
+
+// @Tags 用户管理
+// @Description 修改用户
+// @Summary 修改用户
+// @Accept  application/json
+// @Produce application/json
+// @Param Authorization header string true "token"
+// @Param id path int true "ID"
+// @Param Data body models.User true "用户信息"
+// @Success 200 {string} string {"code": 200, "message": "", "data": {}}
+// @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
+// @Router /admin/user [patch]
+func PatchUser(c *gin.Context)  {
+	if !middleware.PermissionCheckMiddleware(c,"user-edit") {
+		util.JsonRespond(403, "请求资源被拒绝", "", c)
+		return
+	}
+
+	body, e := c.GetRawData()
+	if e != nil {
+		util.JsonRespond(500, e.Error(), "", c)
+		return
+	}
+
+	data := make(map[string]string)
+	json.Unmarshal(body, &data)
+
+	uid,_ := c.Get("Uid")
+	var user models.User
+	models.DB.Model(&models.User{}).
+		Where("id = ?", uid).
+		Find(&user)
+
+
+	switch data["type"] {
+	case "nickname":
+		if data["nickname"] == "" {
+			util.JsonRespond(500, "昵称不能为空！", "", c)
+			return
+		}
+		e 	:= models.DB.Model(&models.User{}).Where("id = ?", uid).Updates(map[string]interface{}{"nickname": data["nickname"]}).Error
+		if e != nil {
+			util.JsonRespond(500, e.Error(), "", c)
+			return
+		}
+	case "password":
+		if data["old_password"] == ""  {
+			util.JsonRespond(500, "旧密码不能为空！", "", c)
+			return
+		}
+		if data["new_password"] == "" {
+			util.JsonRespond(500, "新密码不能为空！", "", c)
+			return
+		}
+		if len(data["new_password"]) < 6 {
+			util.JsonRespond(500, "请设置至少6位的新密码", "", c)
+			return
+		}
+
+		if !util.CheckPasswordHash(data["old_password"], user.PasswordHash) {
+			util.JsonRespond(500, "原密码错误，请重新输入", "", c)
+			return
+		}
+
+		PasswordHash, e := util.HashPassword(data["new_password"])
+		if e != nil {
+			util.JsonRespond(500, "hash密码错误，请联系管理员！", "", c)
+			return
+		}
+
+		e 	= models.DB.Model(&models.User{}).Where("id = ?", uid).Updates(map[string]interface{}{"password_hash": PasswordHash}).Error
+		if e!= nil {
+			util.JsonRespond(500, e.Error(), "", c)
+			return
+		}
+
+	default:
+		util.JsonRespond(500, "错误的参数", "", c)
+		return
+	}
+
+	util.JsonRespond(200, "操作成功", "", c)
 }
 
 // @Tags 用户管理

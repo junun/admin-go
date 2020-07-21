@@ -14,18 +14,39 @@ class Ext1Setup3 extends React.Component {
     this.state = {
       info: {},
       full: '',
+      filterRule: {},
     }
   }
 
   componentDidMount() {
+    var tmpFilterRule = {}
+    if (this.props.info["FilterRule"] != undefined && this.props.info["FilterRule"] != "") {
+      tmpFilterRule = JSON.parse(this.props.info["FilterRule"])
+    }
+
+    var tmpCustomEnvs = {}
+    if (this.props.info["CustomEnvs"] != undefined && this.props.info["CustomEnvs"] != "") {
+      tmpCustomEnvs = JSON.parse(this.props.info["CustomEnvs"])
+    }
+
+    var strCustomEnvs = ""
+    for(let key in tmpCustomEnvs){
+        strCustomEnvs = strCustomEnvs + key + "=" + tmpCustomEnvs[key] + "\n"
+    } 
+
+    var tmp = this.props.info
+    tmp.CustomEnvs = strCustomEnvs
     this.setState({ 
-      info: this.props.info,
+      info: tmp,
+      filterRule: tmpFilterRule,
     });
   }
 
   handleSubmit = () => {
     var values = this.state.info
     values.EnableCheck  = values.EnableCheck ? 1 : 0
+    values.FilterRule   = JSON.stringify(this.state.filterRule)
+    values.Extend = 1
     if (values.Dtid === undefined) {
       this.props.dispatch({
         type: 'config/deployExtendAdd',
@@ -53,6 +74,34 @@ class Ext1Setup3 extends React.Component {
     });
   }
 
+  onChangeFilterRuleType = (e) => {
+    var tmp = this.state.info;
+    var tmpfilterRule = this.state.filterRule
+    tmpfilterRule["type"] = e.target.value
+    this.setState({ 
+      info: tmp,
+      filterRule: tmpfilterRule,
+    })
+  };
+
+  FilterLabel = (props) => (
+    <div style={{display: 'inline-block', height: 39, width: 344}}>
+      <span style={{float: 'left'}}>文件过滤<span style={{margin: '0 8px 0 2px'}}>:</span></span>
+      <Radio.Group
+        style={{marginLeft: 20, float: 'left'}}
+        value={props.type}
+        onChange={this.onChangeFilterRuleType}>
+        <Radio value="contain">包含</Radio>
+        <Radio value="exclude">排除</Radio>
+      </Radio.Group>
+      {this.state.full === '1' ? (
+        <Button onClick={() => this.setState({full: ''})}>退出全屏</Button>
+      ) : (
+        <Button onClick={() => this.setState({full: '1'})}>全屏</Button>
+      )}
+    </div>
+  );
+
   NormalLabel = (props) => (
     <div style={{display: 'inline-block', height: 39, width: 344}}>
       <span style={{float: 'left'}}>{props.title}<span style={{margin: '0 8px 0 2px'}}>:</span></span>
@@ -65,11 +114,28 @@ class Ext1Setup3 extends React.Component {
   );
 
   render() {
-    const {info, full} = this.state;
+    const {info, full, filterRule} = this.state;
+
     return (
       <React.Fragment>
         <Row>
           <Col span={11}>
+            <Form.Item
+              colon={false}
+              className={full === '1' ? styles.fullScreen : null}
+              label={<this.FilterLabel type={filterRule &&  filterRule['type'] || "contain"}/>}
+            >
+              <Editor
+                wrapEnabled
+                mode="text"
+                theme="tomorrow"
+                width="100%"
+                height={full === '1' ? '100vh' : '100px'}
+                placeholder="每行一条规则"
+                value={filterRule && filterRule['data'] || ''}
+                onChange={v => filterRule['data'] = cleanCommand(v)}
+                style={{border: '1px solid #e8e8e8'}}/>
+            </Form.Item>
             <Form.Item
               colon={false}
               className={full === '3' && styles.fullScreen || null}
@@ -100,6 +166,10 @@ class Ext1Setup3 extends React.Component {
             </Form.Item>
           </Col>
           <Col span={2}>
+            <div className={styles.deployBlock} style={{marginTop: 39}}>
+              <Icon type="setting" style={{fontSize: 32}}/>
+              <span style={{fontSize: 12, marginTop: 5}}>基础设置</span>
+            </div>
             <div className={styles.deployBlock}>
               <Icon type="gitlab" style={{fontSize: 32}}/>
               <span style={{fontSize: 12, marginTop: 5}}>检出代码</span>
@@ -110,6 +180,21 @@ class Ext1Setup3 extends React.Component {
             </div>
           </Col>
           <Col span={11}>
+            <Form.Item
+              colon={false}
+              className={full === '2' ? styles.fullScreen : null}
+              label={<this.NormalLabel title="自定义全局变量" id="2"/>}>
+              <Editor
+                wrapEnabled
+                mode="text"
+                theme="tomorrow"
+                width="100%"
+                height={full === '2' ? '100vh' : '100px'}
+                placeholder="每行一个，例如：HOME=/data/spug"
+                value={info['CustomEnvs']}
+                onChange={v => info['CustomEnvs'] = cleanCommand(v)}
+                style={{border: '1px solid #e8e8e8'}}/>
+            </Form.Item>
             <Form.Item
               colon={false}
               className={full === '4' ? styles.fullScreen : null}

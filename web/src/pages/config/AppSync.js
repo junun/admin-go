@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react'
 import { Modal, List, Icon } from 'antd';
 import styles from './index.module.css';
 
@@ -11,26 +11,6 @@ export default class extends React.Component {
     };
   }
 
-  // state = {
-  //   loading: false,
-  //   hasMore: true,
-  // };
-
-  // handleInfiniteOnLoad = () => {
-  //   let { data } = this.state;
-  //   this.setState({
-  //     loading: true,
-  //   });
-  //   if (data.length > 14) {
-  //     message.warning('Infinite List loaded all');
-  //     this.setState({
-  //       hasMore: false,
-  //       loading: false,
-  //     });
-  //     return;
-  //   }
-  // };
-
   componentDidMount() {
     const token = sessionStorage.getItem('jwt');
     const id = this.props.id ? this.props.id: 0;
@@ -38,12 +18,13 @@ export default class extends React.Component {
     const hostname = window.location.hostname;
     const port = window.location.port;
 
-    this.socket = new window.WebSocket(`${protocol}//${hostname}:${port}/admin/deploy/ws/${id}/ssh/${token}`);
+    this.socket = new window.WebSocket(`${protocol}//${hostname}:${port}/admin/exec/ws/${id}/ssh/${token}`);
+    // this.socket = new window.WebSocket(`${protocol}//127.0.0.1:9090/admin/exec/ws/${id}/ssh/${token}`);
 
     var thus = this;
     thus.socket.onopen = function () {
       var tmp = thus.state.data
-      tmp.push("websock onopen！");
+      tmp.push("建立接连...");
       thus.setState({
         data : tmp,
       })
@@ -58,7 +39,6 @@ export default class extends React.Component {
       })
     };
 
-    // var thus = this;
     thus.socket.onmessage = e => {
       if (e.data === 'pong') {
         thus.socket.send(JSON.stringify({type: "heartbeat", data: ""}));
@@ -87,19 +67,28 @@ export default class extends React.Component {
   }
 
   render() {
+    const preStyle = {
+      marginTop: 5,
+      backgroundColor: '#eee',
+      borderRadius: 5,
+      padding: 10,
+    };
+
     return (
       <Modal
         visible
         width={800}
-        destroyOnClose= "true"
-        title="上线信息控制台"
+        title="应用初始化执行控制台"
         footer={null}
         onCancel={this.props.onCancel}
-        // onOk={this.handleSubmit}
-       className={styles.modal}>
-        <div ref='chatoutput' className={styles.modaldiv}>
-          {this.state.data.map((item, index) => <div key={index}>{item}</div>)}
-        </div>
+        onOk={this.handleSubmit}
+        maskClosable={false}
+        className={styles.modal}>
+        <pre style={preStyle}>
+          <div ref='chatoutput' className={styles.modaldiv}>
+            {this.state.data.map((item, index) => <div key={index}>{item}</div>)}
+          </div>
+        </pre>
       </Modal>
     )
   }

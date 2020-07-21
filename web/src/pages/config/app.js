@@ -1,47 +1,52 @@
 import React, {Fragment, Component} from "react";
 import {Form, Card, Input, Table, Divider, Modal, Row, Col, 
   Button, Popconfirm, Icon, message, Radio, Select, Switch,
-  Transfer, Steps, Tag} from "antd";
+  Transfer, Steps, Tag, Dropdown, Menu} from "antd";
 import {connect} from "dva";
 import Link from 'umi/link';
-import ShowWebSocketMessageTemplate from '@/components/Report/ShowWebSocketMessageTemplate';
 import {timeTrans, compareArray, hasPermission} from "@/utils/globalTools";
 import Setup1 from './Ext1Setup1';
 import Setup2 from './Ext1Setup2';
-import Setup3 from './Ext1Setup3'; 
+import Setup3 from './Ext1Setup3';
+import AddSelect from './AddSelect';
+import Ext1Form from './Ext1Form';
+import Ext2Form from './Ext2Form';
+import AppSync from './AppSync';
 import styles from './index.module.css';
+import {httpGet, httpPut} from '@/utils/request';
 
 const FormItem = Form.Item;
 const Option = Select.Option;
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
 
-@connect(({ loading, config, host }) => {
+@connect(({ loading, config, host, user }) => {
   return {
     projectsList: config.projectsList,
     projectsLoading: loading.effects['config/getProject'],
     projectsLen: config.projectsLen,
     configEnvList: config.configEnvList,
     appTypeList: config.appTypeList,
-    hostListByAppId: host.hostListByAppId,
     deployTempleList:config.deployTempleList,
+    robotList: user.robotList,
   }
 })
 
 class ProjectListPage extends React.Component {
   constructor(props) {
     super(props)
-    this.handler = this.handler.bind(this)
   }
 
   state = {
+    loading: false,
     visible: false,
+    addVisible: false,
+    ext1Visible:false,
+    ext2Visible: false,
     showTemplate: false,
     editCacheData: {},
     body: '',
     id: 0,
-    stepsVisible: false,
-    pageNum: 0,
     info:{},
     loadDeployTempleList: 0,
     secondTable: {},
@@ -70,14 +75,16 @@ class ProjectListPage extends React.Component {
         pageSize: 50, 
       }
     });
+    dispatch({ 
+      type: 'user/getRobot',
+      payload: {
+        page: 1,
+        pageSize: 999, 
+        status: 1,
+      }
+    });
   };
 
-  handler = (values) => {
-    this.setState({
-      info: values,
-      pageNum: this.state.pageNum + 1,
-    })
-  }
 
   getDeployExtend = (values) => {
     const { dispatch } = this.props;
@@ -96,12 +103,6 @@ class ProjectListPage extends React.Component {
     });
   }
 
-  prehandler = (values) => {
-    this.setState({
-      pageNum: this.state.pageNum - 1,
-    })
-  }
-
   showEnvAddModal = () => {
     this.setState({
       isOk : false,
@@ -113,12 +114,44 @@ class ProjectListPage extends React.Component {
   handleCancel = () => {
     this.setState({
       visible: false,
-      stepsVisible: false,
       info: {},
       deployTempleList: 0,
-      pageNum: 0,
     });
   };
+
+  cancelAddVisible = () => {
+    this.setState({
+      addVisible: false,
+    });
+  };
+
+  handExt1Visible = () => {
+    this.setState({
+      addVisible:false,
+      ext1Visible: true
+    })
+  }
+
+  cancelExt1Visible = () => {
+    this.setState({
+      ext1Visible: false,
+      info: {},
+    })
+  }
+
+  cancelExt2Visible = () => {
+    this.setState({
+      ext2Visible: false,
+      info: {},
+    })
+  }
+
+  handExt2Visible = () => {
+    this.setState({
+      addVisible:false,
+      ext2Visible: true
+    })
+  }
 
   // 关联角色是为了后期 deploy 权限检查
   // 数组比较
@@ -184,7 +217,6 @@ class ProjectListPage extends React.Component {
   cancel = () => {
   };
 
-
   //显示编辑界面
   handleEdit = (values, page) => {
     values.title =  '编辑项目-' + values.Name;
@@ -203,6 +235,15 @@ class ProjectListPage extends React.Component {
     });
   };
 
+  showAddSelect = (id) => {
+    var tmp = this.state.info
+    tmp["Aid"] = id
+    this.setState({
+      addVisible: true,
+      info: tmp,
+    })
+  }
+
   showStepsAddModal = (id, info, isClone) => {
     if (info === undefined) {
       var tmp = this.state.info
@@ -213,19 +254,25 @@ class ProjectListPage extends React.Component {
     }
 
     isClone && delete tmp.Dtid
-
-    this.setState({
-      stepsVisible: true,
-      info: tmp,
-    });
+    if (info.Extend == 1) {
+      this.setState({
+        ext1Visible: true,
+        info: tmp,
+      })
+    } else{
+      this.setState({
+        ext2Visible: true,
+        info: tmp,
+      })
+    }
   };
 
-  handleSync = (values) => {
-    this.setState({ 
-      showTemplate: true ,
-      id: values,
-    });
-  };
+  // handleSync = (values) => {
+  //   this.setState({ 
+  //     showTemplate: true ,
+  //     id: values,
+  //   });
+  // };
 
   onChange = (e) => {
   };
@@ -236,6 +283,7 @@ class ProjectListPage extends React.Component {
   switchTemplate = () => {
     this.setState({ 
       showTemplate: !this.state.showTemplate,
+      id: 0,
     });
   };
 
@@ -266,7 +314,32 @@ class ProjectListPage extends React.Component {
         tid: dtid,
       }
     });
-  };
+  }
+
+  handleSync = (record) => {
+    this.setState({loading: true});
+    httpGet(`/admin/sync/request/${record.id}`).then( res => {
+      if (res.code != 200) {
+        message.error(res.message)
+        return
+      }
+
+      if (res.code == 200) {
+         Modal.confirm({
+          title: '确认初始项目？',
+          content: `确认初始项目？`,
+          onOk: () => {this.handleSyncConfirm(record.id)}
+        })
+      }
+    }).finally(() => this.setState({loading: false}))
+  }
+
+  handleSyncConfirm = (values) => {
+    this.setState({ 
+      showTemplate: true ,
+      id: values,
+    });
+  }
 
   columns = [
     {
@@ -291,7 +364,7 @@ class ProjectListPage extends React.Component {
     },{
       title: '发布类型',
       dataIndex: 'DeployType',
-      'render': DeployType => DeployType && '自定义发布' || '目录copy',
+      'render': DeployType => DeployType && '自定义发布' || '通用发布',
     },{
       title: '状态',
       dataIndex: 'Active',
@@ -314,35 +387,12 @@ class ProjectListPage extends React.Component {
           <Divider type="vertical" />
           {  
             hasPermission('config-app-set') && 
-            <a onClick={()=>{this.showStepsAddModal(record.id)}}>
-              <Icon type="save"/>新建发布模板
+            // <a onClick={()=>{this.showStepsAddModal(record.id)}}>
+            <a onClick={()=>{this.showAddSelect(record.id)}}>
+              <Icon type="save"/>模板
             </a>
           }
           <Divider type="vertical" />
-          {  
-            record.EnableSync == 1
-            &&
-            hasPermission('config-app-set') && 
-            <Link to={`/config/value?aid=${record.id}`}>
-              <Icon type="setting"/>初始化变量
-            </Link> 
-          }
-          {
-            record.EnableSync == 1 &&
-            <Divider type="vertical" />
-          }
-          {  
-            record.EnableSync == 1 &&
-            hasPermission('config-app-init') && 
-            <Popconfirm title="你确定要操作吗?"
-              onConfirm={()=>{this.handleSync(record.id)}} onCancel={()=>{this.cancel()}}>
-              <a title="初始化" ><Icon type="redo" />初始化</a>
-            </Popconfirm>
-          }
-          {
-            record.EnableSync == 1 &&
-            <Divider type="vertical" />
-          }
           {
             hasPermission('config-app-del') && 
             <Popconfirm title="你确定要删除吗?"  
@@ -354,21 +404,55 @@ class ProjectListPage extends React.Component {
               </a>
             </Popconfirm>
           }
+          {
+            record.EnableSync == 1 &&
+            <Divider type="vertical" />
+          }
+          {  record.EnableSync == 1 &&
+            <Dropdown overlay={() => this.moreMenus(record)} trigger={['click']}>
+              <a>
+                更多 <Icon type="down"/>
+              </a>
+            </Dropdown>
+          }
         </span>
       ),
     },
   ];
+
+  moreMenus = (record) => (
+    <Menu>
+      <Menu.Item>
+        {  
+          hasPermission('config-app-set') && 
+          <Link to={`/config/value?aid=${record.id}`}>
+            <Icon type="setting"/>初始化变量
+          </Link> 
+        }
+      </Menu.Item>
+      <Menu.Divider/>
+      <Menu.Item>
+        {  
+          hasPermission('config-app-init') && 
+          <a onClick={()=>{this.handleSync(record)}} title="初始化" >
+            <Icon type="redo" />初始化
+          </a>
+        }
+      </Menu.Item>
+    </Menu>
+  );
   
   render() {
-    const {visible, showTemplate, editCacheData, stepsVisible, pageNum,
+    const {visible, addVisible, ext1Visible, ext2Visible, 
+      showTemplate, editCacheData,
       body, info, loadDeployTempleList, secondTable } = this.state;
 
     const {configEnvList, appTypeList, projectsList, projectsLoading, 
-      projectsLen, hostsList, projectTargetKeys, imageList, hostListByAppId,
+      projectsLen, hostsList, projectTargetKeys, imageList,
       deployTempleList,
       form: { getFieldDecorator} } = this.props;
 
-    const addvar = <Button type="" onClick={this.showEnvAddModal} >添加</Button>;
+    const addvar = <Button type="" onClick={this.showEnvAddModal} >添加应用</Button>;
     const extra = <Row gutter={16}>
           {hasPermission('config-app-add') && <Col span={10}>{addvar}</Col>}
       </Row>;
@@ -383,6 +467,13 @@ class ProjectListPage extends React.Component {
       // }
 
       const columns = [
+      {
+        title: '模式',
+        dataIndex: 'Extend',
+        render: value => value == 1 ? <Icon style={{fontSize: 20, color: '#1890ff'}} type="ordered-list"/> :
+          <Icon style={{fontSize: 20, color: '#1890ff'}} type="build"/>,
+        width: 80
+      }, 
       {
         title: '模板名字',
         dataIndex: 'TemplateName',
@@ -518,54 +609,42 @@ class ProjectListPage extends React.Component {
         </Modal>
 
         { showTemplate && 
-          <ShowWebSocketMessageTemplate
+          <AppSync
             id={this.state.id} 
             onCancel={this.switchTemplate} 
             onOk={body => this.setState({body})}
           />
         }
 
-        <Modal
-          visible={stepsVisible}
-          width={800}
-          maskClosable={false}
-          destroyOnClose= "true"
-          title= { editCacheData.title || "新建常规发布" }
-          onCancel={this.handleCancel}
-          footer={null}>
-          <Steps current={pageNum} className={styles.steps}>
-            <Steps.Step key={0} title="基本配置"/>
-            <Steps.Step key={1} title="发布主机"/>
-            <Steps.Step key={2} title="任务配置"/>
-          </Steps>
-          {
-            pageNum === 0 && 
-            <Setup1 
-              configEnvList={configEnvList}
-              nextPage={this.handler}
-              info={this.state.info}
-            />
-          }
-          {
-            pageNum === 1 && 
-            <Setup2
-              info={info}
-              nextPage={this.handler}
-              prePage={this.prehandler}
-              dispatch={this.props.dispatch}
-              hostListByAppId={hostListByAppId}
-            />
-          }
-          {
-            pageNum === 2 && 
-            <Setup3
-              info={info}
-              prePage={this.prehandler}
-              dispatch={this.props.dispatch}
-              handleCancel={this.handleCancel}
-            />
-          }
-        </Modal>
+        { addVisible && 
+          <AddSelect 
+            cancelAddVisible={this.cancelAddVisible}
+            ext1Visible={this.handExt1Visible}
+            ext2Visible={this.handExt2Visible}
+          />
+        }
+
+        { ext1Visible &&  
+          <Ext1Form 
+            cancelExt1Visible={this.cancelExt1Visible}
+            editCacheData={this.state.editCacheData}
+            configEnvList={configEnvList}
+            info={this.state.info}
+            dispatch={this.props.dispatch}
+            robotList={this.props.robotList}
+          />
+        }
+
+        { ext2Visible &&  
+          <Ext2Form 
+            cancelExt2Visible={this.cancelExt2Visible}
+            editCacheData={this.state.editCacheData}
+            configEnvList={configEnvList}
+            info={this.state.info}
+            dispatch={this.props.dispatch}
+            robotList={this.props.robotList}
+          />
+        }
 
         <Card title="" extra={extra}>
           <Table 

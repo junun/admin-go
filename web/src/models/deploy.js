@@ -1,5 +1,5 @@
 import {getDeploy, deployAdd, deployEdit, deployDel, 
-  deployReview, 
+  deployReview, getGitTag, rollbackConfirm,
   getGitBranch, getGitCommit } from '@/services/deploy';
 import router from 'umi/router';
 import { message } from 'antd';
@@ -14,6 +14,7 @@ export default {
     deploySize: 10,
     gitBranchList: [],
     gitCommitList: [],
+    gitTagList: [],
   },
 
   reducers: {
@@ -37,6 +38,12 @@ export default {
         gitBranchList: payload.lists,
       }
     },
+    updateGitTag(state, { payload }) {
+      return {
+        ...state,
+        gitTagList: payload.lists,
+      }
+    },
     updateGitCommit(state, { payload }) {
       return {
         ...state,
@@ -48,6 +55,7 @@ export default {
         ...state,
         gitBranchList: [],
         gitCommitList: [],
+        gitTagList: [],
       }
     },
   },
@@ -107,28 +115,83 @@ export default {
         yield put({
           type: 'getDeploy',
         });
+        if (payload.IsPass == 1) {
+          message.success(response.message);
+        } else {
+          message.warn(response.message);
+        }
       } else {
         message.error(response.message);
       }
     },
+    *getGitTag({payload}, { call, put, select }){
+      const response = yield call(getGitTag, payload);
+      if (response && response.code == 200) {
+        yield put({
+          type: 'updateGitTag',
+          payload: response.data,
+        });
+      } else {
+        response.data.lists = [];
+        yield put({
+          type: 'updateGitTag',
+          payload: response.data,
+        });
+      }
+    },
     *getGitBranch({payload}, { call, put, select }){
       const response = yield call(getGitBranch, payload);
-      yield put({
-        type: 'updateGitBranch',
-        payload: response.data,
-      });
+      if (response && response.code == 200) {
+        yield put({
+          type: 'updateGitBranch',
+          payload: response.data,
+        });
+      } else {
+        response.data.lists = [];
+        yield put({
+          type: 'updateGitBranch',
+          payload: response.data,
+        });
+      }
     },
     *getGitCommit({payload}, { call, put, select }){
       const response = yield call(getGitCommit, payload);
-      yield put({
-        type: 'updateGitCommit',
-        payload: response.data,
-      });
+      if (response && response.code == 200) {
+        yield put({
+          type: 'updateGitCommit',
+          payload: response.data,
+        });
+      } else {
+        response.data.lists = [];
+        yield put({
+          type: 'updateGitCommit',
+          payload: response.data,
+        });
+      }
     },
     *cleanBranchList({payload}, { put }){
       yield put({
         type: 'cleanGitInfoList',
       });
     },
+    *rollbackConfirm({payload}, { call, put }){
+      const response = yield call(rollbackConfirm, payload);
+      if (response && response.code == 200) {
+        yield put({
+          type: 'getDeploy',
+        });
+        message.success(response.message);
+      } else {
+        message.error(response.message);
+      }
+    },
+    // *getAppVersion({payload}, { call, put, select }){
+    //   const response = yield call(getAppVersion, payload);
+    //   if (response && response.code == 200) {
+    //     console.log(response)
+    //   } else {
+
+    //   }
+    // },
   }
 };

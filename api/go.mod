@@ -3,7 +3,10 @@ module api
 go 1.14
 
 require (
+	github.com/360EntSecGroup-Skylar/excelize v1.4.1
+	github.com/PuerkitoBio/goquery v1.5.1 // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
+	github.com/andelf/go-curl v0.0.0-20200630032108-fd49ff24ed97
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-gonic/gin v1.6.2
@@ -17,9 +20,12 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/websocket v1.4.2
 	github.com/jinzhu/gorm v1.9.12
-	github.com/json-iterator/go v1.1.9
+	github.com/json-iterator/go v1.1.10
+	github.com/likexian/whois-go v1.7.1
+	github.com/likexian/whois-parser-go v1.14.3
 	github.com/mailru/easyjson v0.7.1 // indirect
 	github.com/pkg/sftp v1.11.0
+	github.com/prometheus/client_golang v1.7.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sirupsen/logrus v1.5.0
 	github.com/swaggo/gin-swagger v1.2.0
@@ -30,4 +36,5 @@ require (
 	golang.org/x/net v0.0.0-20200421231249-e086a090c8fd
 	golang.org/x/text v0.3.2
 	golang.org/x/tools v0.0.0-20200422205258-72e4a01eba43 // indirect
+	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 )

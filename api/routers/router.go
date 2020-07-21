@@ -7,6 +7,7 @@ import (
 	"api/pkg/setting"
 	"api/pkg/upload"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/swaggo/gin-swagger"
 	"github.com/swaggo/gin-swagger/swaggerFiles"
 	"net/http"
@@ -23,21 +24,31 @@ func InitRouter() *gin.Engine {
 
 	r.Use(gin.Recovery())
 
+	r.Use(middleware.MetricMiddleware())
+
 	r.LoadHTMLGlob("templates/*")
 
 	gin.SetMode(setting.RunMode)
+
+	//r.GET("/debug/pprof", gin.WrapF(pprof.Index))
+	//r.GET("/debug/heap", gin.WrapH(pprof.Handler("heap")))
+	//r.GET("/debug/goroutine", gin.WrapH(pprof.Handler("goroutine")))
+	//r.GET("/debug/cmdline", gin.WrapH(pprof.Handler("cmdline")))
+	//r.GET("/debug/profile", gin.WrapF(pprof.Profile))
+	//r.GET("/debug/symbol", gin.WrapH(pprof.Handler("symbol")))
+	//r.GET("/debug/trace", gin.WrapH(pprof.Handler("trace")))
+
+	// metrics
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// gin swagger
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// 业务初始化
-	r.GET("/admin/exec/ws/:id/ssh/:token", admin.SyncWsApp)
+	r.GET("/admin/exec/ws/:id/ssh/:token", admin.SyncApp)
 
-	// 业务上线
-	r.GET("/admin/deploy/ws/:id/ssh/:token", admin.PutAppDeployRedo)
-
-	// 业务回滚
-	r.GET("/admin/undeploy/ws/:id/ssh/:token", admin.PutAppDeployUndo)
+	// 业务上线/回滚
+	r.GET("/admin/deploy/ws/:id/ssh/:token", admin.AppDeployRedo)
 
 	// ConsoleHost 逻辑
 	r.GET("/admin/host/ssh/:id", admin.ConsoleHost)
@@ -63,6 +74,7 @@ func InitRouter() *gin.Engine {
 
 		adminv1.GET("/user", admin.GetUsers)
 		adminv1.POST("/user", admin.PostUser)
+		adminv1.PATCH("/user", admin.PatchUser)
 		adminv1.PUT("/user/:id", admin.PutUser)
 		adminv1.DELETE("/user/:id", admin.DeleteUser)
 		adminv1.GET("/perms", admin.GetPerms)
@@ -71,12 +83,28 @@ func InitRouter() *gin.Engine {
 		adminv1.PUT("/perms/:id", admin.PutPerms)
 		adminv1.GET("/perms/lists", admin.GetAllPerms)
 
+		adminv1.GET("/system", admin.GetSetting)
+		adminv1.POST("/system", admin.SettingModify)
+		adminv1.GET("/system/about", admin.About)
+		adminv1.GET("/system/robot", admin.GetRobot)
+		adminv1.POST("/system/robot", admin.AddRobot)
+		adminv1.PUT("/system/robot/:id", admin.PutRobot)
+		adminv1.DELETE("/system/robot/:id", admin.DelRobot)
+		adminv1.POST("/system/robot/:id", admin.RobotTest)
+		adminv1.POST("/system/mail", admin.EmailTest)
+
 		adminv1.GET("/roles",admin.GetRole)
 		adminv1.POST("/roles", admin.PostRole)
 		adminv1.DELETE("/roles/:id", admin.DeleteRole)
 		adminv1.PUT("/roles/:id", admin.PutRole)
 		adminv1.GET("/roles/:id/permissions", admin.GetRolePerms)
 		adminv1.POST("/roles/:id/permissions", admin.PostRolePerms)
+		adminv1.GET("/roles/:id/app", admin.GetRoleApp)
+		adminv1.POST("/roles/:id/app", admin.PostRoleApp)
+		adminv1.GET("/roles/:id/host", admin.GetRoleHost)
+		adminv1.POST("/roles/:id/host", admin.PostRoleHost)
+		adminv1.GET("/env/app", admin.GetEnvApp)
+		adminv1.GET("/env/host", admin.GetEnvHost)
 
 		adminv1.GET("/menus", admin.GetMenus)
 		adminv1.POST("/menus", admin.PostMenus)
@@ -93,15 +121,11 @@ func InitRouter() *gin.Engine {
 		adminv1.PUT("/domain/info/:id", admin.PutDomainInfo)
 		adminv1.DELETE("/domain/info/:id", admin.DelDomainInfo)
 
-		adminv1.GET("/domain/cert", admin.GetDomainCret)
-		adminv1.POST("/domain/cert", admin.AddDomainCret)
-		adminv1.PUT("/domain/cert/:id", admin.PutDomainCret)
-		adminv1.DELETE("/domain/cert/:id", admin.DelDomainCret)
-
 		adminv1.GET("/host/role", admin.GetHostRole)
 		adminv1.POST("/host/role", admin.AddHostRole)
 		adminv1.PUT("/host/role/:id", admin.PutHostRole)
 		adminv1.DELETE("/host/role/:id", admin.DelHostRole)
+		adminv1.POST("/host/import", admin.ImportHost)
 
 		adminv1.GET("/host", admin.GetHost)
 		adminv1.POST("/host", admin.AddHost)
@@ -139,15 +163,23 @@ func InitRouter() *gin.Engine {
 		adminv1.POST("/config/deploy", admin.AddDeployExtend)
 		adminv1.PUT("/config/deploy/:id", admin.PutDeployExtend)
 		adminv1.DELETE("/config/deploy/:id", admin.DelDeployExtend)
+		adminv1.GET("/sync/request/:id", admin.AppSyncRequest)
 
 		adminv1.GET("/deploy/app", admin.GetAppDeploy)
 		adminv1.POST("/deploy/app", admin.AddAppDeploy)
 		adminv1.PUT("/deploy/app/:id", admin.PutAppDeploy)
 		adminv1.DELETE("/deploy/app/:id", admin.DelAppDeploy)
-		adminv1.PUT("/deploy/app/:id/review/:status", admin.PutAppDeployStatus)
+		adminv1.PUT("/undo/confirm/:id", admin.PutUndoRequest)
+		adminv1.GET("/undo/request/:id", admin.GetUndoRequest)
+		adminv1.GET("/deploy/request/:id", admin.GetDeployRequest)
+		adminv1.POST("/deploy/request/:id", admin.PostDeployRequest)
+		adminv1.PUT("/deploy/app/:id/review", admin.PutAppDeployStatus)
 		//adminv1.PUT("/deploy/app/:id/undo/:status", admin.PutAppDeployUndo)
 		adminv1.GET("/deploy/app/:id/branch", admin.GetGitBranch)
+		adminv1.GET("/deploy/app/:id/tag", admin.GetGitTag)
 		adminv1.GET("/deploy/app/:id/commit/:branch", admin.GetGitCommit)
+		//adminv1.GET("/deploy/app/:id/version", admin.GetAppVersion)
+
 
 		adminv1.GET("/notify", admin.GetNotify)
 		adminv1.PATCH("/notify", admin.PatchNotify)

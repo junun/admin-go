@@ -237,7 +237,6 @@ export default {
         Aid : payload.aid &&  payload.aid || 0,
         EnvId: payload.envid &&  payload.envid || 0,
       };
-
       const response = yield call(getHostByAppId, query);
       yield put({
         type: 'updateHostListByAppId',

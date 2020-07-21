@@ -3,21 +3,32 @@ package admin
 import (
 	"api/middleware"
 	"api/models"
+	"api/pkg/help"
 	"api/pkg/util"
-	"fmt"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
-	"github.com/unknwon/com"
 	"strconv"
 	"strings"
 	"time"
 )
 
+type ApproveResource struct {
+	IsPass      int 		`form:"IsPass"`
+	Reason 		string		`form:"Reason"`
+}
+
+type UndoConfirmResource struct {
+	Version 	string 		`form:"Version"`
+}
+
 type DeployApp struct {
+	ID          int         `form:"ID"`
 	Name    	string    	`form:"Name"`
 	Tid			int			`form:"Tid"`
-	RepoBranch	string		`form:"RepoBranch"`
-	RepoCommit 	string		`form:"RepoCommit"`
+	GitType		string      `form:"GitType"`
+	TagBranch	string		`form:"TagBranch"`
+	Commit 		string		`form:"Commit"`
+	Desc 		string		`form:"Desc"`
 	Status		int			`form:"Status"`
 }
 
@@ -25,10 +36,14 @@ type AppTemplateDeploy struct {
 	ID              int
 	Aid             int
 	Tid				int
-	Tag				string
+	TemplateName    string
+	GitType			string
 	Name      		string
-	RepoBranch 		string
-	RepoCommit 		string
+	TagBranch 		string
+	Commit 			string
+	Version 		string
+	Reason 			string
+	Desc 			string
 	Status			int
 	Operator		int
 	Review          int
@@ -36,16 +51,99 @@ type AppTemplateDeploy struct {
 	UpdateTime 		time.Time
 }
 
+type DeployAppEnvRes struct {
+	ID 				int
+	Aid 			int
+	Extend			int
+	HostIds			string
+	AppName 		string
+	PreCode			string
+	PreDeploy 		string
+	EnableSync		int
+	EnvId 			int
+	EnvName 		string
+}
+
+type TargetRes struct {
+	ID 		int
+	Title   string
+}
+
+type LocalRes struct {
+	Data  	[]string
+}
+
+type DeployRequestRes struct {
+	AppName 		string
+	EnvName 		string
+	PreCode			string
+	PreDeploy 		string
+	Status 			int
+	Targets			[]TargetRes
+	Type			int
+	Outputs			[]help.Msg
+}
+
 const (
 	NewDeploy		= 1
 	ReviewSuccess  	= 2
-	ReviewFail 		= 3
-	DeployFail		= 4
+	OnDeploy		= 3
+    UndoNeedDeploy  = 4
+	ReviewFail 		= -1
+	UndoFail		= -2
+	DeployFail		= -3
 	DeploySuccess 	= 5
 	UndoSuccess     = 6
-	UndoFail 		= 7
 )
 
+//func GetAppVersion(c *gin.Context)  {
+//	if !middleware.PermissionCheckMiddleware(c,"config-app-git") {
+//		util.JsonRespond(403, "请求资源被拒绝", "", c)
+//		return
+//	}
+//	var det models.DeployExtend
+//
+//	models.DB.Model(&models.DeployExtend{}).
+//		Where("dtid = ?", c.Param("id")).Find(&det)
+//
+//	if det.Dtid == 0 {
+//		util.JsonRespond(500, "未找到指定发布模板", "", c)
+//		return
+//	}
+//
+//	res , e := util.FetchVersions(det.Aid, det.RepoUrl)
+//	if e != nil {
+//		util.JsonRespond(500, e.Error(), "", c)
+//		return
+//	}
+//
+//	data := make(map[string]interface{})
+//	data["lists"] = res
+//
+//	util.JsonRespond(200, "", data, c)
+//}
+
+func GetGitTag(c *gin.Context)  {
+	if !middleware.PermissionCheckMiddleware(c,"config-app-git") {
+		util.JsonRespond(403, "请求资源被拒绝", "", c)
+		return
+	}
+	var det models.DeployExtend
+
+	models.DB.Model(&models.DeployExtend{}).
+		Where("dtid = ?", c.Param("id")).Find(&det)
+
+	res , e := util.ReturnGitTagByCommand(det.Aid, det.RepoUrl)
+	if e != nil {
+		util.JsonRespond(500, e.Error(), "", c)
+		return
+	}
+
+	data := make(map[string]interface{})
+	data["lists"] = res
+
+	util.JsonRespond(200, "", data, c)
+}
 
 func GetGitBranch(c *gin.Context)  {
 	if !middleware.PermissionCheckMiddleware(c,"config-app-git") {
@@ -122,7 +220,7 @@ func GetAppDeploy(c *gin.Context)  {
 
 	var deploy []AppTemplateDeploy
 	// 分页逻辑还没有写，有空补上。
-	e := models.DB.Raw("select d.*, e.aid from app_deploy d left join deploy_extend e on d.tid=e.dtid order by d.id DESC").Scan(&deploy).Error
+	e := models.DB.Raw("select d.*, e.aid, e.template_name from app_deploy d left join deploy_extend e on d.tid=e.dtid order by d.id DESC").Scan(&deploy).Error
 
 	if e != nil {
 		util.JsonRespond(500, e.Error(), "", c)
@@ -159,13 +257,43 @@ func AddAppDeploy(c *gin.Context)  {
 		return
 	}
 
+	maps := make(map[string]interface{})
+	maps["tag_branch"] = data.TagBranch
+	maps["tid"] = data.Tid
+
 	// 发布唯一性检查
-	models.DB.Model(&models.AppDeploy{}).
-		Where("tid = ?", data.Tid).
-		Where("repo_branch = ?", data.RepoBranch).
-		Where("repo_commit = ?", data.RepoCommit).
-		Where("status <= 2").
-		Find(&deploy)
+	if data.GitType == "tag" {
+		if data.ID > 0  {
+			models.DB.Model(&models.AppDeploy{}).
+				Where(maps).
+				Where("status <= 2").
+				Where("id ! = ?", data.ID).
+				Find(&deploy)
+		} else {
+			models.DB.Model(&models.AppDeploy{}).
+				Where(maps).
+				Where("status <= 2").
+				Find(&deploy)
+		}
+
+	}
+
+	if data.GitType == "branch" {
+		if data.ID > 0  {
+			models.DB.Model(&models.AppDeploy{}).
+				Where(maps).
+				Where("id != ?", data.ID).
+				Where("commit = ?", data.Commit).
+				Where("status <= 2").
+				Find(&deploy)
+		} else {
+			models.DB.Model(&models.AppDeploy{}).
+				Where(maps).
+				Where("commit = ?", data.Commit).
+				Where("status <= 2").
+				Find(&deploy)
+		}
+	}
 
 	if deploy.ID > 0 {
 		util.JsonRespond(500, "重复的项目上线提单，请检查！", "", c)
@@ -187,11 +315,17 @@ func AddAppDeploy(c *gin.Context)  {
 	deploy = models.AppDeploy{
 		Name: data.Name,
 		Tid: data.Tid,
-		RepoBranch: data.RepoBranch,
-		RepoCommit: data.RepoCommit,
+		Desc: data.Desc,
+		GitType: data.GitType,
+		TagBranch: data.TagBranch,
+		Commit: data.Commit,
 		Operator: uid.(int),
 		Status: sts,
 		UpdateTime: time.Now().AddDate(0,0,0),
+	}
+
+	if data.ID > 0 {
+		deploy.ID = data.ID
 	}
 
 	e := models.DB.Save(&deploy).Error
@@ -229,12 +363,11 @@ func PutAppDeploy(c *gin.Context)  {
 		return
 	}
 
-	fmt.Println(data)
 	// 发布唯一性检查
 	models.DB.Model(&models.AppDeploy{}).
 		Where("tid = ?", data.Tid).
-		Where("repo_branch = ?", data.RepoBranch).
-		Where("repo_commit = ?", data.RepoCommit).
+		Where("repo_branch = ?", data.TagBranch).
+		Where("repo_commit = ?", data.Commit).
 		Where("status <= 2").
 		Find(&deploy)
 
@@ -247,8 +380,8 @@ func PutAppDeploy(c *gin.Context)  {
 
 	uid,_ 				:= c.Get("Uid")
 	deploy.Name     	= data.Name
-	deploy.RepoBranch	= data.RepoBranch
-	deploy.RepoCommit 	= data.RepoCommit
+	deploy.TagBranch	= data.TagBranch
+	deploy.Commit 		= data.Commit
 	deploy.Operator		= uid.(int)
 	deploy.UpdateTime   = time.Now().AddDate(0,0,0)
 
@@ -259,7 +392,7 @@ func PutAppDeploy(c *gin.Context)  {
 		return
 	}
 
-	util.JsonRespond(200, "修改Project成功", "", c)
+	util.JsonRespond(200, "修改成功", "", c)
 }
 
 // @Tags 应用发布
@@ -316,620 +449,359 @@ func PutAppDeployStatus(c *gin.Context)  {
 		return
 	}
 
-	id 			:= c.Param("id")
-	status,_  	:= com.StrTo(c.Param("status")).Int()
-	uid,_ 		:= c.Get("Uid")
+	var data ApproveResource
 
-	rows 		:= models.DB.Model(&models.AppDeploy{}).
-		Where("id = ?", id).
-		Update("status", status).
-		Update("review", uid.(int)).RowsAffected
-
-	if rows == 0 {
-		util.JsonRespond(500, "修改状态失败！", "", c)
+	e 	:= c.BindJSON(&data)
+	if e!= nil {
+		util.JsonRespond(500, "Invalid Approve Data", "", c)
 		return
 	}
 
-	if status == 2 {
+	id 			:= c.Param("id")
+	uid,_ 		:= c.Get("Uid")
+	status 		:= 2
+
+	if data.IsPass == 0 {
+		status = 3
+	}
+
+	if data.IsPass == 1 && data.Reason != "" || data.IsPass == 0 {
+		e := models.DB.Model(&models.AppDeploy{}).
+			Where("id = ?", id).
+			Updates(map[string]interface{}{
+			    "is_pass": data.IsPass,
+				"status": status,
+				"reason": data.Reason,
+				"review": uid.(int) }).Error
+
+		if e != nil {
+			util.JsonRespond(500, e.Error(), "", c)
+			return
+		}
+	} else {
+		e := models.DB.Model(&models.AppDeploy{}).
+			Where("id = ?", id).
+			Updates(map[string]interface{}{
+				"is_pass": data.IsPass,
+			    "status": status,
+				"review": uid.(int) }).Error
+
+		if e != nil {
+			util.JsonRespond(500, e.Error(), "", c)
+			return
+		}
+	}
+
+	if data.IsPass == 1 {
 		util.JsonRespond(200, "审核通过", "", c)
 		return
 	}
 
-	util.JsonRespond(200, "审核拒绝", "", c)
+	util.JsonRespond(200, "审核拒绝 :" + data.Reason, "", c)
 }
 
-
-// 发布逻辑
-func PutAppDeployRedo(c *gin.Context)  {
-	middleware.WsTokenAuthMiddleware1("deploy-app-redo", c)
-
-	id 			:= c.Param("id")
-	userid,_ 	:= c.Get("Uid")
-	uid 		:= userid.(int)
-
-	//升级get请求为webSocket协议
-	wsConn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
-	if err != nil {
-		wsConn.WriteMessage(websocket.TextMessage, []byte("cant upgrade connection:"))
+// @Tags 应用发布
+// @Description 应用发布查看
+// @Summary  应用发布查看
+// @Produce  json
+// @Param Authorization header string true "token"
+// @Param id path int true "应用发布ID"
+// @Success 200 {string} string {"code": 200, "message": "", "data": {}}
+// @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
+// @Router /admin/deploy/request/{id} [get]
+func GetDeployRequest(c *gin.Context)  {
+	if !middleware.PermissionCheckMiddleware(c,"deploy-app-request") {
+		util.JsonRespond(403, "请求资源被拒绝", "", c)
 		return
 	}
-	defer wsConn.Close()
 
-	// 执行发布逻辑
+	var target TargetRes
+	var targets []TargetRes
+
+	data 	:= make(map[string]interface{})
+	id 		:= c.Param("id")
+	isLog 	:= c.Query("log")
+	//isUndo  := c.Query("type")
+
+	var deploy models.AppDeploy
+	models.DB.Model(&models.HostApp{}).
+		Where("id = ?", id).
+		Find(&deploy)
+
+	if deploy.ID == 0 {
+		util.JsonRespond(500, "未找到指定发布申请", "", c)
+		return
+	}
+
+	// 获取主机和app
+	var res DeployAppEnvRes
+	sql := "SELECT d.id, e.host_ids, e.pre_deploy, e.pre_code, e.extend, a.name as app_name, v.id as env_id, v.name as env_name FROM app_deploy d LEFT JOIN deploy_extend e ON d.tid = e.dtid LEFT JOIN app a  ON a.id = e.aid LEFT JOIN config_env v ON a.env_id = v.id WHERE a.active = 1 AND d.id = " + c.Param("id")
+
+	e := models.DB.Raw(sql).Scan(&res).Error
+	if e != nil {
+		util.JsonRespond(500, e.Error(), "", c)
+		return
+	}
+
+	harr := strings.Split(res.HostIds, ",")
+	var hosts []models.Host
+	models.DB.Model(&models.Host{}).
+		Where("id in (?)", harr).
+		Find(&hosts)
+
+	for _, v := range hosts {
+		target.ID = v.ID
+		target.Title = v.Name + "(" + v.Addres + string(v.Port) + ")"
+		targets = append(targets, target)
+	}
+
+	var drr DeployRequestRes
+	drr.AppName 	= res.AppName
+	drr.EnvName 	= res.EnvName
+	drr.Status		= deploy.Status
+	drr.Targets 	= targets
+	drr.Outputs		= []help.Msg{}
+
+	if res.Extend == 2 {
+		drr.PreCode 	= res.PreCode
+		drr.PreDeploy	= res.PreDeploy
+	}
+
+	if isLog == "true" {
+		msg := help.Msg{}
+		var counter int64
+		key 	:= models.DeployInfoKey + id
+		counter = 0
+		res, _ 	:= models.Rdb.LRange(key, counter, counter+9).Result()
+
+		for {
+			if len(res) > 0 {
+				counter += 10
+				for _, v := range res {
+					if e := json.Unmarshal([]byte(v), &msg); e != nil {
+						util.JsonRespond(500, e.Error(), "", c)
+						return
+					}
+					drr.Outputs = append(drr.Outputs, msg)
+				}
+
+				res, _ 	= models.Rdb.LRange(key, counter, counter+9).Result()
+				continue
+			}
+			break
+		}
+	}
+
+    data["lists"] 	= drr
+	util.JsonRespond(200, "", data, c)
+}
+
+// @Tags 应用发布
+// @Description 应用发布请求
+// @Summary  应用发布请求
+// @Produce  json
+// @Param Authorization header string true "token"
+// @Param id path int true "应用发布ID"
+// @Success 200 {string} string {"code": 200, "message": "", "data": {}}
+// @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
+// @Router /admin/deploy/request/{id} [post]
+func PostDeployRequest(c *gin.Context)  {
+	if !middleware.PermissionCheckMiddleware(c,"deploy-app-request") {
+		util.JsonRespond(403, "请求资源被拒绝", "", c)
+		return
+	}
+
+	id 	:= c.Param("id")
 	var deploy models.AppDeploy
 	models.DB.Model(&models.AppDeploy{}).
 		Where("id = ?", id).
-		Where("status = ?", ReviewSuccess).
 		Find(&deploy)
 
-	// 检查发布申请信息
-	if deploy.ID <= 0 {
-		wsConn.WriteMessage(websocket.TextMessage, []byte("错误的发布申请，请检查！"))
+	if deploy.ID == 0 {
+		util.JsonRespond(500, "未找到指定发布申请", "", c)
 		return
 	}
 
-	// 检查发布模板信息
-	var det models.DeployExtend
-	models.DB.Model(&models.DeployExtend{}).
-		Where("dtid = ?", deploy.Tid).
-		Find(&det)
-
-	if det.Dtid <= 0 {
-		wsConn.WriteMessage(websocket.TextMessage, []byte("项目发布模板已经删除，请检查！"))
+	if !(deploy.Status != ReviewSuccess || deploy.Status != UndoNeedDeploy) {
+		util.JsonRespond(500, "该申请单当前状态还不能执行发布", "", c)
 		return
 	}
 
-	// 检查项目信息
-	var app models.App
-	models.DB.Model(&models.App{}).
-		Where("id = ?", det.Aid).
-		Where("active = 1").
-		Find(&app)
-
-	if app.ID <= 0 {
-		wsConn.WriteMessage(websocket.TextMessage, []byte("项目状态不可用或者项目已经删除，请检查！"))
-		return
-	}
-
-	if app.DeployType != 0 {
-		// 检查发布类型
-		switch app.Tid {
-		// backend jar
-		case 1:
-			BackendJarDeploy(id, app, det, deploy, uid, wsConn)
-		case 2:
-			fmt.Println(2)
-		}
-	} else {
-		// 通用目录 copy 方式
-		DirectoryCopy(id, app, det, deploy, uid, wsConn)
-	}
-}
-
-func BackendJarDeploy(id string, app models.App, det models.DeployExtend, deploy models.AppDeploy, uid int, ws *websocket.Conn)  {
-	// 检查项目是否初始化
-	var hostapp []models.HostApp
+	// 获取主机和app
 	sts := 0
-	if app.EnableSync == 1 {
+	var res DeployAppEnvRes
+	sql := "SELECT d.id, e.host_ids, a.id as aid, a.name as app_name, a.enable_sync, v.id as env_id, v.name as env_name FROM app_deploy d LEFT JOIN deploy_extend e ON d.tid = e.dtid LEFT JOIN app a ON a.id = e.aid LEFT JOIN config_env v ON a.env_id = v.id WHERE a.active = 1 AND d.id = " + c.Param("id")
+
+	e := models.DB.Raw(sql).Scan(&res).Error
+	if e != nil {
+		util.JsonRespond(500, e.Error(), "", c)
+		return
+	}
+
+	uid,_ 	:= c.Get("Uid")
+	var user models.User
+	models.DB.Model(&models.User{}).
+		Where("id = ?", uid).
+		Find(&user)
+	if user.IsSupper != 1 {
+		middleware.RoleAppAuthMiddleware(user.Rid, res.EnvId, res.Aid, c)
+	}
+
+	// 检查项目是否需要初始化
+	if res.EnableSync == 1 {
 		sts = 1
 	}
+
+	var hostapp []models.HostApp
 	models.DB.Model(&models.HostApp{}).
-		Where("aid = ?", app.ID).
+		Where("aid = ?", res.Aid).
 		Where("status = ?", sts).
 		Find(&hostapp)
 
+
+	harr := strings.Split(res.HostIds, ",")
+	var hosts []models.Host
+	models.DB.Model(&models.Host{}).
+		Where("id in (?)", harr).
+		Find(&hosts)
+
 	if len(hostapp) <= 0 && sts == 1 {
-		ws.WriteMessage(websocket.TextMessage, []byte("该项目还没有初始化，请检查！"))
+		util.JsonRespond(500, "该项目还没有初始化，请先初始化！", "", c)
 		return
 	}
 
 	if len(hostapp) <= 0 && sts == 0 {
-		ws.WriteMessage(websocket.TextMessage, []byte("该项目还没有绑定到主机，请检查！"))
+		util.JsonRespond(500, "该项目还没有绑定到主机，请先绑定业务到主机！", "", c)
 		return
 	}
 
-	// 锁定项目，一个项目同时只能允许一个执行该方法
-	key := models.GitAppOnWorking + app.Name
-	if models.GetValByKey(key) != "" {
-		ws.WriteMessage(websocket.TextMessage, []byte("该项目别的用户在发布中，请稍后重试！"))
-		return
+	data := make(map[string]interface{})
+	for _, v := range hosts {
+		var localData LocalRes
+		localData.Data = []string{""}
+		strid := strconv.Itoa(v.ID)
+		data[strid] = localData
 	}
 
-	ws.WriteMessage(websocket.TextMessage, []byte("检查本地代码库是否有指定的分支"))
-	e := util.GitCheckoutByCommit(app.ID, det.RepoUrl, deploy.RepoCommit)
-	if e != nil {
-		ws.WriteMessage(websocket.TextMessage, []byte(e.Error()))
-		return
-	}
+	var localData LocalRes
+	localData.Data = []string{util.HumanNowTime() + "建立接连...   "}
 
-	// 本地拉取代码前执行的任务
-	if det.PreCode != "" {
-
-	}
-
-	// 本地拉取代码后要执行的任务， 如果编译打包
-	gitpath := util.ReturnGitLocalPath(app.ID, det.RepoUrl)
-	if det.PostCode != "" {
-		e    = util.ExecRuntimeCmdToWs(det.PostCode, gitpath, ws)
-		if e != nil {
-			ws.WriteMessage(websocket.TextMessage, []byte(e.Error()))
-			return
-		}
-	}
-
-	// 本次需要发布的主机
-	hosts := strings.Split(det.HostIds,",")
-
-	// 执行部署任务
-	for _, v := range hostapp {
-		if !util.StringInSlice(strconv.Itoa(v.Hid), hosts) {
-			continue
-		}
-
-		var host models.Host
-		models.DB.Model(&models.Host{}).
-			Where("id = ?", v.Hid).
-			Where("status = 1").
-			Find(&host)
-
-		// sftp 通道建立
-		clientConfig, _ := util.ReturnClientConfig(host.Username, "")
-		hostIp 			:= host.Addres + ":" + strconv.Itoa(host.Port)
-		Scli, e 		:= util.GetSshClient(hostIp, clientConfig)
-		if e != nil {
-			ws.WriteMessage(websocket.TextMessage, []byte(e.Error()))
-			return
-		}
-
-		SftpClient, e := util.GetSftpClient(Scli)
-		if e != nil {
-			ws.WriteMessage(websocket.TextMessage, []byte(e.Error()))
-			return
-		}
-
-		// 远端服务器， 发布前执行的任务
-		if det.PreDeploy != "" {
-
-		}
-
-		path 	:= "/data/webapps/" + app.Name
-		// 检查是否为首次发布
-		_, e = SftpClient.Stat( path + "/lib/" +
-			app.Name + "-" +
-			det.Tag + ".jar")
-		if e == nil {
-			// 备份逻辑
-			msg := "备份服务器" + host.Name
-			ws.WriteMessage(websocket.TextMessage, []byte(msg))
-
-			cmd		:= "cp " + path + "/lib/%s-" +
-				det.Tag + ".jar" + " " +
-				path + "/temp/%s-" +
-				det.Tag + ".jar_%d"
-
-			cmd    	= fmt.Sprintf(cmd, app.Name, app.Name, time.Now().Unix())
-			fmt.Println(cmd)
-
-			util.ExecCmdBySshToWs(cmd, Scli, ws)
-		}
-
-		// copy 逻辑
-		ws.WriteMessage(websocket.TextMessage, []byte("Copy项目包到远端服务器" + host.Name + host.Addres))
-
-		var localFile string
-		localFile 	= gitpath + "/target/"  + app.Name + "-" +
-			det.Tag + ".jar"
-		if !util.Exists(localFile) {
-			localFile 	= gitpath + "/" + app.Name +
-				"/target/" + app.Name + "-" +
-				det.Tag + ".jar"
-		}
-
-		e = util.PutFile(SftpClient, localFile,  path + "/lib" )
-		if e != nil {
-			ws.WriteMessage(websocket.TextMessage, []byte(e.Error()))
-			return
-		}
-
-		// 修改文件属主
-		ws.WriteMessage(websocket.TextMessage, []byte("修改包的属主属性！"))
-		cmd := "chown -R tomcat:tomcat " +  path + "/lib"
-		util.ExecCmdBySshToWs(cmd, Scli, ws)
-
-		// 创建软连接
-		ws.WriteMessage(websocket.TextMessage, []byte("创建软连接！"))
-		cmd = "ln -sv " +  path + "/lib/" + app.Name +
-			"-" + det.Tag + ".jar" + " "  +
-			path + "/lib/" + app.Name + ".jar"
-		util.ExecCmdBySshToWs(cmd, Scli, ws)
-
-		// 重启服务
-		ws.WriteMessage(websocket.TextMessage, []byte("重启服务！"))
-		cmd = "cd " + path + "/bin; bash control restart"
-		util.ExecCmdBySshToWs(cmd, Scli, ws)
-	}
-
-	// 取消锁定
-	models.SetValByKey(key, "1",  2 * time.Second)
-
-
-	// 修改数据库信息 stauts 5
-	e 	= models.DB.Model(&models.AppDeploy{}).
-		Where("id = ?", id).
-		Update("status", DeploySuccess).
-		Update("deploy", uid).
-		Error
-
-	if e != nil {
-		ws.WriteMessage(websocket.TextMessage, []byte(e.Error()))
-		return
-	}
-
-	ws.WriteMessage(websocket.TextMessage, []byte("项目部署完毕!"))
+	data["local"] = localData
+	util.JsonRespond(200, "", data, c)
 }
 
-func DirectoryCopy(id string, app models.App, det models.DeployExtend, deploy models.AppDeploy, uid int, ws *websocket.Conn) {
-	// 检查项目是否初始化
-	var hostapp []models.HostApp
-	sts := 0
-	if app.EnableSync == 1 {
-		sts = 1
-	}
-	models.DB.Model(&models.HostApp{}).
-		Where("aid = ?", app.ID).
-		Where("status = ?", sts).
-		Find(&hostapp)
 
-	if len(hostapp) <= 0 && sts == 1 {
-		ws.WriteMessage(websocket.TextMessage, []byte("该项目还没有初始化，请检查！"))
+// @Tags 应用发布
+// @Description 应用回滚请求
+// @Summary  应用回滚请求
+// @Produce  json
+// @Param Authorization header string true "token"
+// @Param id path int true "应用发布ID"
+// @Success 200 {string} string {"code": 200, "message": "", "data": {}}
+// @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
+// @Router /admin/undo/request/{id} [get]
+func GetUndoRequest(c *gin.Context)  {
+	if !middleware.PermissionCheckMiddleware(c,"undo-app-request") {
+		util.JsonRespond(403, "请求资源被拒绝", "", c)
 		return
 	}
 
-	if len(hostapp) <= 0 && sts == 0 {
-		ws.WriteMessage(websocket.TextMessage, []byte("该项目还没有绑定到主机，请检查！"))
-		return
-	}
+	data 	:= make(map[string]interface{})
+	id 		:= c.Param("id")
 
-	// 锁定项目，一个项目同时只能允许一个执行该方法
-	key := models.GitAppOnWorking + app.Name
-	if models.GetValByKey(key) != "" {
-		ws.WriteMessage(websocket.TextMessage, []byte("该项目别的用户在发布中，请稍后重试！"))
-		return
-	}
-
-	ws.WriteMessage(websocket.TextMessage, []byte("检查本地代码库是否有指定的分支"))
-	e := util.GitCheckoutByCommit(app.ID, det.RepoUrl, deploy.RepoCommit)
-	if e != nil {
-		ws.WriteMessage(websocket.TextMessage, []byte(e.Error()))
-		return
-	}
-
-	// 本地拉取代码前执行的任务
-	if det.PreCode != "" {
-
-	}
-
-	// 本地拉取代码后要执行的任务， 如果编译打包
-	gitpath := util.ReturnGitLocalPath(app.ID, det.RepoUrl)
-	if det.PostCode != "" {
-		e    = util.ExecRuntimeCmdToWs(det.PostCode, gitpath, ws)
-		if e != nil {
-			ws.WriteMessage(websocket.TextMessage, []byte(e.Error()))
-			return
-		}
-	}
-
-	// 本次需要发布的主机
-	hosts := strings.Split(det.HostIds,",")
-
-	// 执行部署任务
-	for _, v := range hostapp {
-		if !util.StringInSlice(strconv.Itoa(v.Hid), hosts) {
-			continue
-		}
-
-		var host models.Host
-		models.DB.Model(&models.Host{}).
-			Where("id = ?", v.Hid).
-			Where("status = 1").
-			Find(&host)
-
-		// sftp 通道建立
-		clientConfig, _ := util.ReturnClientConfig(host.Username, "")
-		hostIp 			:= host.Addres + ":" + strconv.Itoa(host.Port)
-		Scli, e 		:= util.GetSshClient(hostIp, clientConfig)
-		if e != nil {
-			ws.WriteMessage(websocket.TextMessage, []byte(e.Error()))
-			return
-		}
-
-		SftpClient, e := util.GetSftpClient(Scli)
-		if e != nil {
-			ws.WriteMessage(websocket.TextMessage, []byte(e.Error()))
-			return
-		}
-
-		// 远端服务器， 发布前执行的任务
-		if det.PreDeploy != "" {
-
-		}
-
-		path 	:= det.DstDir
-		backdir := det.DstRepo + "/" + strconv.Itoa(app.ID) + "/" + det.TemplateName
-		cmd     := "mkdir -p " + backdir
-
-		// 备份逻辑
-		msg := "备份服务器:" + host.Name + "  业务:" + app.Name
-		ws.WriteMessage(websocket.TextMessage, []byte(msg))
-		util.ExecCmdBySshToWs(cmd, Scli, ws)
-
-		cmd		= "cp -r " + path +
-				" " + backdir + "/" + strconv.FormatInt(time.Now().Unix(),10)
-
-		fmt.Println(cmd)
-
-		util.ExecCmdBySshToWs(cmd, Scli, ws)
-
-		// copy 逻辑
-		ws.WriteMessage(websocket.TextMessage, []byte("Copy项目到远端服务器" + host.Name + host.Addres))
-		e = util.PutDirectory(SftpClient, gitpath, path)
-		if e != nil {
-			ws.WriteMessage(websocket.TextMessage, []byte(e.Error()))
-			return
-		}
-
-		// 执行发布后任务
-		ws.WriteMessage(websocket.TextMessage, []byte("执行发布后任务 : " + det.PostDeploy))
-		util.ExecCmdBySshToWs(det.PostDeploy, Scli, ws)
-
-
-		// 历史版本数
-		cmd 	= "cd %s && ls -1tr %s | head -n -%d | xargs -d '\\n' rm -rf --"
-		cmd    	= fmt.Sprintf(cmd, backdir, backdir, det.Versions)
-		fmt.Println(cmd)
-		util.ExecCmdBySshToWs(cmd, Scli, ws)
-	}
-
-	// 取消锁定
-	models.SetValByKey(key, "1",  2 * time.Second)
-
-
-	// 修改数据库信息 stauts 5
-	e 	= models.DB.Model(&models.AppDeploy{}).
-		Where("id = ?", id).
-		Update("status", DeploySuccess).
-		Update("deploy", uid).
-		Error
-
-	if e != nil {
-		ws.WriteMessage(websocket.TextMessage, []byte(e.Error()))
-		return
-	}
-
-	ws.WriteMessage(websocket.TextMessage, []byte("项目部署完毕!"))
-}
-
-// 回滚管理
-func PutAppDeployUndo(c *gin.Context)  {
-	middleware.WsTokenAuthMiddleware1("deploy-app-undo", c)
-
-	id 			:= c.Param("id")
-	userid,_ 	:= c.Get("Uid")
-	uid 		:= userid.(int)
-
-	//升级get请求为webSocket协议
-	wsConn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
-	if err != nil {
-		wsConn.WriteMessage(websocket.TextMessage, []byte("can not upgrade connection:"))
-		return
-	}
-	defer wsConn.Close()
-
-	// 执行回滚逻辑
 	var deploy models.AppDeploy
-
 	models.DB.Model(&models.AppDeploy{}).
 		Where("id = ?", id).
-		Where("status = ?", DeploySuccess).
 		Find(&deploy)
 
-	// 检查发布申请信息
-	if deploy.ID <= 0 {
-		wsConn.WriteMessage(websocket.TextMessage, []byte("错误的回滚申请，请检查！"))
+	if deploy.ID == 0 {
+		util.JsonRespond(500, "未找到指定发布记录", "", c)
 		return
 	}
 
-	// 检查发布模板信息
-	var det models.DeployExtend
-	models.DB.Model(&models.DeployExtend{}).
-		Where("dtid = ?", deploy.Tid).
-		Find(&det)
-
-	if det.Dtid <= 0 {
-		wsConn.WriteMessage(websocket.TextMessage, []byte("项目发布模板已经删除，请检查！"))
+	// 检查发布申请时间,1：超过1天禁止回滚 2： 有更新发布的版本也禁止回滚
+	UpdateTimeAddOneDay 	:= deploy.UpdateTime.AddDate(0, 0, 1)
+	if (deploy.UpdateTime.After(UpdateTimeAddOneDay)) {
+		util.JsonRespond(500, "该项目发布已经超过1天禁止回滚!", "", c)
 		return
 	}
 
-	// 检查项目信息
-	var app models.App
-	models.DB.Model(&models.App{}).
-		Where("id = ?", det.Aid).
-		Where("active = 1").
-		Find(&app)
+	var newdeploy []models.AppDeploy
+	models.DB.Model(&models.AppDeploy{}).
+		Where("id > ?", id).
+		Where("tid = ?", deploy.Tid).
+		Where("status = ? or status = ? or status = ?", DeploySuccess, UndoSuccess, UndoNeedDeploy).
+		Find(&newdeploy)
 
-	if app.ID <= 0 {
-		wsConn.WriteMessage(websocket.TextMessage, []byte("项目状态不可用或者项目已经删除，请检查！"))
+	if len(newdeploy) > 0 {
+		util.JsonRespond(500, "该项目有更新的版本发布，禁止回滚该版本!", "", c)
 		return
 	}
 
-	if app.DeployType != 0 {
-		// 检查发布类型
-		switch app.Tid {
-		// backend jar
-		case 1:
-			BackendJarUndoDeploy(id, app, det, uid, wsConn)
-		case 2:
-			fmt.Println(2)
-		}
-	} else {
-		// 通用目录 copy 方式
-		DirectoryCopyUndo(id, app, det, uid, wsConn)
+	var olddeploy models.AppDeploy
+	models.DB.Model(&models.AppDeploy{}).
+		Where("id < ?", id).
+		Where("tid = ?", deploy.Tid).
+		Where("status = ? or status = ? ", DeploySuccess, UndoSuccess).
+		Find(&olddeploy)
+
+	if olddeploy.ID == 0 || olddeploy.Version == ""{
+		util.JsonRespond(500, "未找到该应用可以用于回滚的版本", "", c)
+		return
 	}
+
+	data["UpdateTime"] 	= olddeploy.UpdateTime
+	data["Version"] 	= olddeploy.Version
+
+	util.JsonRespond(200, "", data, c)
 }
 
-func DirectoryCopyUndo(id string, app models.App, det models.DeployExtend, uid int, ws *websocket.Conn) {
-	// 检查项目是否初始化
-	var hostapp []models.HostApp
-	sts := 0
-	if app.EnableSync == 1 {
-		sts = 1
+// @Tags 应用发布
+// @Description 应用回滚创建
+// @Summary  应用回滚创建
+// @Produce  json
+// @Param Authorization header string true "token"
+// @Param id path int true "应用发布ID"
+// @Success 200 {string} string {"code": 200, "message": "", "data": {}}
+// @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
+// @Router /admin/undo/confirm/{id} [put]
+func PutUndoRequest(c *gin.Context)  {
+	if !middleware.PermissionCheckMiddleware(c,"undo-app-request") {
+		util.JsonRespond(403, "请求资源被拒绝", "", c)
+		return
 	}
 
+	var data UndoConfirmResource
+
+	id 	:= c.Param("id")
+	if e 	:= c.BindJSON(&data); e != nil {
+		util.JsonRespond(500, e.Error(), "", c)
+		return
+	}
+
+	var deploy models.AppDeploy
+	var newDeploy models.AppDeploy
 	models.DB.Model(&models.HostApp{}).
-		Where("aid = ?", app.ID).
-		Where("status = ?", sts).
-		Find(&hostapp)
-
-	// 本次需要回滚的主机
-	hosts := strings.Split(det.HostIds,",")
-
-	// 执行部署任务
-	for _, v := range hostapp {
-		if !util.StringInSlice(strconv.Itoa(v.Hid), hosts) {
-			continue
-		}
-
-		var host models.Host
-		models.DB.Model(&models.Host{}).
-			Where("id = ?", v.Hid).
-			Where("status = 1").
-			Find(&host)
-
-		// sftp 通道建立
-		clientConfig, _ := util.ReturnClientConfig(host.Username, "")
-		hostIp 			:= host.Addres + ":" + strconv.Itoa(host.Port)
-		Scli, e 		:= util.GetSshClient(hostIp, clientConfig)
-		if e != nil {
-			ws.WriteMessage(websocket.TextMessage, []byte(e.Error()))
-			return
-		}
-
-		path 	:= det.DstDir
-		backdir := det.DstRepo + "/" + strconv.Itoa(app.ID) + "/" + det.TemplateName
-
-		//获取最近一次备份
-		cmd 	:= "cd %s && ls -1t | head -n1"
-		cmd    	= fmt.Sprintf(cmd, backdir)
-		res, e 	:= util.ExecuteCmd(cmd, Scli)
-		res 	= strings.Replace(res, "\n", "", -1)
-
-		if e != nil {
-			// 回滚失败修改数据库信息
-			models.DB.Model(&models.AppDeploy{}).
-				Where("id = ?", id).
-				Update("status", UndoFail).
-				Update("deploy", uid)
-		}
-
-		cmd		= "cp -rf " + backdir + "/" + res + "/*" + " " + path
-		util.ExecCmdBySshToWs(cmd, Scli, ws)
-
-		// 执行发布后任务
-		ws.WriteMessage(websocket.TextMessage, []byte("执行发布后任务 : " + det.PostDeploy))
-		util.ExecCmdBySshToWs(det.PostDeploy, Scli, ws)
-	}
-
-	// 修改数据库信息 stauts 5
-	e 	:= models.DB.Model(&models.AppDeploy{}).
 		Where("id = ?", id).
-		Update("status", UndoSuccess).
-		Update("deploy", uid).
-		Error
+		Find(&deploy)
 
-	if e != nil {
-		ws.WriteMessage(websocket.TextMessage, []byte("回滚成功修改数据库信息失败！"))
+	if deploy.ID == 0 {
+		util.JsonRespond(500, "未找到指定发布记录", "", c)
 		return
 	}
 
-	ws.WriteMessage(websocket.TextMessage, []byte("项目回滚完毕!"))
-}
+	newDeploy.Version 	= data.Version
+	newDeploy.Status	= UndoNeedDeploy
+	newDeploy.Tid		= deploy.Tid
+	newDeploy.GitType   = deploy.GitType
+	newDeploy.Name		= deploy.Name + "-回滚"
+	newDeploy.IsPass	= deploy.IsPass
+	newDeploy.UpdateTime= time.Now()
 
-func BackendJarUndoDeploy(id string, app models.App, det models.DeployExtend, uid int, ws *websocket.Conn)  {
-	var hostapp []models.HostApp
-	// 执行回滚任务
-	models.DB.Model(&models.HostApp{}).
-		Where("aid = ?", app.ID).
-		Where("status = 1").
-		Find(&hostapp)
-
-	if len(hostapp) <= 0 {
-		ws.WriteMessage(websocket.TextMessage, []byte("该项目还没有初始化，请检查！"))
+	if e := models.DB.Save(&newDeploy).Error; e != nil {
+		util.JsonRespond(500, e.Error(), "", c)
 		return
 	}
 
-	// 本次需要回滚的主机
-	hosts := strings.Split(det.HostIds,",")
-
-	for _, v := range hostapp {
-		if !util.StringInSlice(strconv.Itoa(v.Hid), hosts) {
-			continue
-		}
-
-		var host models.Host
-		models.DB.Model(&models.Host{}).
-			Where("id = ?", v.Hid).
-			Where("status = 1").
-			Find(&host)
-
-		// sftp 通道建立
-		clientConfig, _ := util.ReturnClientConfig(host.Username, "")
-		hostIp 			:= host.Addres + ":" + strconv.Itoa(host.Port)
-		Scli, e 		:= util.GetSshClient(hostIp, clientConfig)
-		if e != nil {
-			ws.WriteMessage(websocket.TextMessage, []byte(e.Error()))
-			return
-		}
-
-		path 	:= det.DstDir
-		backdir := det.DstRepo + "/" + strconv.Itoa(app.ID) + "/" + det.TemplateName
-
-		//获取最近一次备份
-		cmd 	:= "cd %s && ls -1t | head -n1"
-		cmd    	= fmt.Sprintf(cmd, backdir)
-		res, e 	:= util.ExecuteCmd(cmd, Scli)
-		res 	= strings.Replace(res, "\n", "", -1)
-
-		ws.WriteMessage(websocket.TextMessage, []byte("回滚到上一个版本:" + res))
-		if e != nil {
-			// 回滚失败修改数据库信息
-			models.DB.Model(&models.AppDeploy{}).
-				Where("id = ?", id).
-				Update("status", UndoFail).
-				Update("deploy", uid)
-		}
-
-		cmd		= "cp -rf " + backdir + "/" + res + "/*" + " " + path
-
-		fmt.Println(cmd)
-		util.ExecCmdBySshToWs(cmd, Scli, ws)
-
-
-		// 重启服务
-		ws.WriteMessage(websocket.TextMessage, []byte("重启服务！"))
-		cmd = "cd " + path + "/bin; bash control restart"
-		util.ExecCmdBySshToWs(cmd, Scli, ws)
-	}
-
-	// 回滚成功修改数据库信息
-	e := models.DB.Model(&models.AppDeploy{}).
-		Where("id = ?", id).
-		Update("status", UndoSuccess).
-		Update("deploy", uid).Error
-
-	if e != nil {
-		ws.WriteMessage(websocket.TextMessage, []byte("回滚成功修改数据库信息失败！"))
-		return
-	}
-
-	ws.WriteMessage(websocket.TextMessage, []byte("回滚成功！"))
+	util.JsonRespond(200, "回滚申请创建成功", "", c)
 }

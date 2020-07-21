@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -69,54 +71,51 @@ func PermissionCheckMiddleware(c *gin.Context, perm string) bool{
 	}
 }
 
-func WsTokenAuthMiddleware(pemr string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		token := c.Param("token")
-
-		if token == "" {
-			util.JsonRespond(401, "API token required", "", c)
-			c.Abort()
-			return
-		}
-
-
-		var user  models.User
-		e := models.DB.Where("access_token = ?", token).First(&user).Error
-		if e != nil{
-			util.JsonRespond(401, "Invalid API token, please login", "", c)
-			c.Abort()
-		}
-		fmt.Println(user)
-
-		if user.IsSupper != 1 {
-			key 		:= models.RoleRermsSetKey
-			UserRid 	:= user.Rid
-			str 		:= fmt.Sprintf("%v", UserRid)
-			redis_key 	:=  key + str
-
-			// 检查 redis 有没有该key的集合
-			err := models.Rdb.Exists(redis_key).Val()
-			if err != 1 {
-				rid 	:= UserRid
-				models.SetRolePermToSet(redis_key, rid)
-			}
-
-			// 检查对应的set是否有该角色权限
-			if models.CheckMemberByKey(redis_key, pemr) {
-				util.JsonRespond(403, "请求资源被拒绝", "", c)
-				return
-			}
-		}
-		fmt.Println(user.ID)
-
-		c.Set("Uid", user.ID)
-
-		c.Next()
-	}
-}
+//func WsTokenAuthMiddleware(pemr string) gin.HandlerFunc {
+//	return func(c *gin.Context) {
+//		token := c.Param("token")
+//
+//		if token == "" {
+//			util.JsonRespond(401, "API token required", "", c)
+//			c.Abort()
+//			return
+//		}
+//
+//		var user  models.User
+//		e := models.DB.Where("access_token = ?", token).First(&user).Error
+//		if e != nil{
+//			util.JsonRespond(401, "Invalid API token, please login", "", c)
+//			c.Abort()
+//		}
+//
+//		if user.IsSupper != 1 {
+//			key 		:= models.RoleRermsSetKey
+//			UserRid 	:= user.Rid
+//			str 		:= fmt.Sprintf("%v", UserRid)
+//			redis_key 	:=  key + str
+//
+//			// 检查 redis 有没有该key的集合
+//			err := models.Rdb.Exists(redis_key).Val()
+//			if err != 1 {
+//				rid 	:= UserRid
+//				models.SetRolePermToSet(redis_key, rid)
+//			}
+//
+//			// 检查对应的set是否有该角色权限
+//			if models.CheckMemberByKey(redis_key, pemr) {
+//				util.JsonRespond(403, "请求资源被拒绝", "", c)
+//				return
+//			}
+//		}
+//
+//		c.Set("Uid", user.ID)
+//
+//		c.Next()
+//	}
+//}
 
 
-func WsTokenAuthMiddleware1(pemr string, c *gin.Context)  {
+func WsTokenAuthMiddleware(pemr string, c *gin.Context)  {
 	token := c.Param("token")
 	if token == "" {
 		util.JsonRespond(401, "API token required", "", c)
@@ -151,6 +150,23 @@ func WsTokenAuthMiddleware1(pemr string, c *gin.Context)  {
 	}
 
 	c.Set("Uid", user.ID)
+}
+
+func RoleAppAuthMiddleware(rid, eid, aid int, c *gin.Context) {
+	var app  models.RoleEnvApp
+	models.DB.Model(&models.RoleEnvApp{}).
+		Where("rid = ?", rid).
+		Where("eid = ?", eid).
+		Find(&app)
+	if app.ID == 0 {
+		util.JsonRespond(404, "请求应用资源不存在，请检查！", "", c)
+		return
+	}
+
+	if !util.StrArrContains(strings.Split(app.AppIds, ","), strconv.Itoa(aid)) {
+		util.JsonRespond(403, "请求应用资源被拒绝！", "", c)
+		return
+	}
 }
 
 func Cors() gin.HandlerFunc {

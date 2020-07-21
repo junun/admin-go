@@ -1,5 +1,8 @@
 import { userLogin, userLogout, getLists, getRoles, getPermissions, permAdd, 
   permEdit, getAllPermissions, getUserPermissions, userAdd, userEdit, 
+  settingModify, settingMailTest, robotTest, getRoleEnvApp,
+  getAllEnvApp, roleAppAdd, getAllEnvHost, getRoleEnvHost, roleHostAdd,
+  getSetting, getSettingAbout, getRobot, robotAdd, robotEdit, robotDel,
   userDel, roleAdd, roleEdit, roleDel, permDel, rolePermsAdd, getRolePerms } from '@/services/user';
 import router from 'umi/router';
 import { message } from 'antd';
@@ -22,6 +25,16 @@ export default {
     permPage: 1,
     // 权限列表分页大小
     permSize: 10,
+    settingList: [],
+    settingAbout: {}, 
+    allEnvAppList: [],
+    envAppList: {},
+    allEnvHostList: [],
+    envHostList: {},
+    robotList: [],
+    robotCount: 0,
+    robotPage: 1,
+    robotSize: 10,
   },
 
   reducers: {
@@ -52,6 +65,30 @@ export default {
         allPermissionsList: payload,
       }
     },
+    updateAllEnvAppList(state, { payload }){
+      return {
+        ...state,
+        allEnvAppList: payload,
+      }
+    },
+    updateAllEnvHostList(state, { payload }){
+      return {
+        ...state,
+        allEnvHostList: payload,
+      }
+    },
+    updateRoleEnvAppList(state, { payload }){
+      return {
+        ...state,
+        envAppList: payload,
+      }
+    },
+    updateRoleEnvHostList(state, { payload }){
+      return {
+        ...state,
+        envHostList: payload,
+      }
+    },
     updateUserPermissionList(state, { payload }){
       return {
         ...state,
@@ -73,6 +110,25 @@ export default {
         permSize: payload.hasOwnProperty('pagesize') && payload.pagesize || 10,
       }
     },
+    updateSettingList(state, { payload }) {
+      return {
+        ...state,
+        settingList: payload.lists,
+      }
+    },
+    updateSettingAbout(state, { payload }) {
+      return {
+        ...state,
+        settingAbout: payload.lists,
+      }
+    },
+    updateRobotList(state, { payload }) {
+      return {
+        ...state,
+        robotList: payload.lists,
+        robotCount: payload.count,
+      }
+    },
   },
 
   effects: {
@@ -88,7 +144,7 @@ export default {
         sessionStorage.setItem('is_supper', response.data.is_supper);
         sessionStorage.setItem('permissions', response.data.permissions);
         sessionStorage.setItem('user', JSON.stringify(response.data));
-        yield put(router.push('/welcome/info'));
+        yield put(router.push('/welcome'));
       } else {
         message.error(response.message);
       }
@@ -261,6 +317,60 @@ export default {
         payload: temp,
       });
     },
+    *getAllEnvApp({payload}, { call, put, select }){
+      const response = yield call(getAllEnvApp);
+      if (response && response.code == 200) {
+        yield put({
+          type: 'updateAllEnvAppList',
+          payload: response.data,
+        });
+      }
+    },
+    *getAllEnvHost({payload}, { call, put, select }){
+      const response = yield call(getAllEnvHost);
+      if (response && response.code == 200) {
+        yield put({
+          type: 'updateAllEnvHostList',
+          payload: response.data,
+        });
+      }
+    },
+    *getRoleEnvApp({payload}, { call, put, select }){
+      const response = yield call(getRoleEnvApp, payload);
+      if (response && response.code == 200) {
+        yield put({
+          type: 'updateRoleEnvAppList',
+          payload: response.data,
+        });
+      }
+    },
+    *getRoleEnvHost({payload}, { call, put, select }){
+      const response = yield call(getRoleEnvHost, payload);
+      if (response && response.code == 200) {
+        yield put({
+          type: 'updateRoleEnvHostList',
+          payload: response.data,
+        });
+      }
+    },
+    *roleAppAdd({payload}, { call, put, select }){
+      var id = payload.id
+      const response = yield call(roleAppAdd, payload);
+      if (response && response.code == 200) {
+        message.success(response.message)
+      } else {
+        message.error(response.message);
+      }
+    },
+    *roleHostAdd({payload}, { call, put, select }){
+      var id = payload.id
+      const response = yield call(roleHostAdd, payload);
+      if (response && response.code == 200) {
+        message.success(response.message)
+      } else {
+        message.error(response.message);
+      }
+    },
     *rolePermsAdd({payload}, { call, put, select }){
       var id = payload.id
       const response = yield call(rolePermsAdd, payload);
@@ -269,6 +379,94 @@ export default {
           type: 'getRolePerms',
           payload: id,
         });
+      } else {
+        message.error(response.message);
+      }
+    },
+    *getSetting({payload}, { call, put, select }){
+      const response = yield call(getSetting);
+      yield put({
+        type: 'updateSettingList',
+        payload: response.data,
+      });
+    },
+    *getSettingAbout({payload}, { call, put, select }){
+      const response = yield call(getSettingAbout);
+      yield put({
+        type: 'updateSettingAbout',
+        payload: response.data,
+      });
+    },
+    *settingModify({payload}, { call, put, select }){
+      const response = yield call(settingModify, payload);
+      if (response && response.code == 200) {
+        yield put({
+          type: 'getSetting',
+        });
+        message.success(response.message);
+      } else {
+        message.error(response.message);
+      }
+    },
+    *settingMailTest({payload}, { call, put, select }){
+      const response = yield call(settingMailTest, payload);
+      if (response && response.code == 200) {
+        message.success(response.message);
+      } else {
+        message.error(response.message);
+      }
+    },
+    *getRobot({payload}, { call, put, select }){
+      var query = {};
+      if (payload) {
+        query = {
+          page: payload.page,
+          pagesize: payload.pageSize,
+        };
+        if ('status' in payload) {
+          query.status = payload.status
+        }
+      }
+      const response = yield call(getRobot, query);
+      yield put({
+        type: 'updateRobotList',
+        payload: response.data,
+      });
+    },
+    *robotAdd({payload}, { call, put, select }){
+      const response = yield call(robotAdd, payload);
+      if (response && response.code == 200) {
+        yield put({
+          type: 'getRobot',
+        });
+      } else {
+        message.error(response.message);
+      }
+    },
+    *robotEdit({payload}, { call, put, select }){
+      const response = yield call(robotEdit, payload);
+      if (response && response.code == 200) {
+        yield put({
+          type: 'getRobot',
+        });
+      } else {
+        message.error(response.message);
+      }
+    },
+    *robotDel({payload}, { call, put, select }){
+      const response = yield call(robotDel, payload);
+      if (response && response.code == 200) {
+        yield put({
+          type: 'getRobot',
+        });
+      } else {
+        message.error(response.message);
+      }
+    },
+    *robotTest({payload}, { call, put, select }){
+      const response = yield call(robotTest, payload);
+      if (response && response.code == 200) {
+        message.success(response.message);
       } else {
         message.error(response.message);
       }

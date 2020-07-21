@@ -166,3 +166,36 @@ func ReturnLocalIpAddress() []string {
 
 	return ips
 }
+
+func HumanNowTime() string {
+	t := time.Now()
+
+	return t.Format( "15:04:05")
+}
+
+func HumanNowDate() string {
+	t := time.Now()
+
+	return t.Format("20060102150405")
+}
+
+func ParseEnvs(text string) (error, string) {
+	data := make(map[string]string)
+	if text != "" {
+		for _, v := range strings.Split(text, "\n") {
+			if v == "" {
+				continue
+			}
+			fields := strings.Split(v, "=")
+			if len(fields) != 2 || strings.TrimSpace(fields[0]) == "" {
+				var e = fmt.Errorf("%s", "解析自定义全局变量"+ v +"失败，确认其遵循 key = value 格式")
+				return e, ""
+			}
+			data[fields[0]] = fields[1]
+		}
+		return nil, JSONMarshalToString(data)
+	}
+
+	var e = fmt.Errorf("%s", "内容不能为空！")
+	return e, ""
+}

@@ -1,6 +1,7 @@
 package util
 
 import (
+	"api/pkg/logging"
 	"api/pkg/setting"
 	"fmt"
 	"github.com/go-git/go-git/v5"
@@ -8,7 +9,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/storer"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
-	"log"
 	"os"
 	"os/exec"
 	"strconv"
@@ -18,6 +18,13 @@ import (
 
 func GetGitLocalPath() string {
 	return setting.AppSetting.GitLocalPath
+}
+
+func ReturnAppGitRoot(aid int) string {
+	dir, _ 	:= os.Getwd()
+	path 	:= dir + "/" + GetGitLocalPath() + strconv.Itoa(aid)
+
+	return path
 }
 
 func ReturnGitLocalPath(aid int, url string) string {
@@ -75,9 +82,10 @@ func GitCLone(aid int, url string) error {
 		setting.AppSetting.GitSshKey, "")
 
 	_, err 		= git.PlainClone(path, false, &git.CloneOptions{
-		URL:               url,
-		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
-		Auth:              sshAuth,
+		URL:               	url,
+		RecurseSubmodules: 	git.DefaultSubmoduleRecursionDepth,
+		Auth:              	sshAuth,
+		NoCheckout:			true,
 	})
 
 	if err != nil {
@@ -87,43 +95,52 @@ func GitCLone(aid int, url string) error {
 	return nil
 }
 
-func GitPull(aid int,url string) error {
-	w, err := ReturnGitWorkDir(aid, url)
-	if err != nil {
-		return err
+func GitPull(aid int, url string) error {
+	w, e := ReturnGitWorkDir(aid, url)
+	if e != nil {
+		return e
 	}
 
-	sshAuth, err := ssh.NewPublicKeysFromFile(
+	sshAuth, e := ssh.NewPublicKeysFromFile(
 		"git",
 		setting.AppSetting.GitSshKey, "")
 
 	// Pull the latest changes from the origin remote and merge into the current branch
-	err = w.Pull(&git.PullOptions{
+	e = w.Pull(&git.PullOptions{
 		RemoteName: "origin",
-		Auth: sshAuth,})
+		Auth: sshAuth,
+		Force: true,
+	})
 
-	if err != nil {
-		return  err
+	if e != nil && e.Error() != "already up-to-date" && e.Error() != "non-fast-forward update" {
+		return  e
 	}
 
 	return nil
 }
 
-
-
 func GitCheckoutByBranch(aid int, url, branch string) error {
 	GitPull(aid, url)
 
-	w, err := ReturnGitWorkDir(aid, url)
-	if err != nil {
-		return err
+	w, e := ReturnGitWorkDir(aid, url)
+	if e != nil {
+		return e
 	}
 
-	err = w.Checkout(&git.CheckoutOptions{
-		Branch: plumbing.ReferenceName("refs/heads/" + branch),
+	branchStr := fmt.Sprintf("refs/heads/%s", branch)
+	b := plumbing.ReferenceName(branchStr)
+
+	e = w.Checkout(&git.CheckoutOptions{
+		Create: false,
+		Force: true,
+		Keep:true,
+		Branch: b,
 	})
-	if err != nil {
-		return err
+
+	if e != nil {
+		// got an error  - try to create it
+		err := w.Checkout(&git.CheckoutOptions{Create: true, Force: false, Branch: b} )
+		CheckIfError(err)
 	}
 
 	return nil
@@ -140,9 +157,79 @@ func remoteBranches(s storer.ReferenceStorer) (storer.ReferenceIter, error) {
 	}, refs), nil
 }
 
+func ReturnGitTagByCommand(aid int, url string) ([]string, error) {
+	r, e :=ReturnGitPlainOpen(aid, url)
+	if e != nil {
+		return nil, e
+	}
+	h, _ := r.Head()
+
+	// go-git pull cannot update tags
+	cmd 		:= exec.Command("git", "pull",  "origin", h.Strings()[0] , "--tags")
+	cmd.Dir 	=  ReturnGitLocalPath(aid, url)
+	_, e 		= cmd.CombinedOutput()
+
+	if e != nil && e.Error() != "already up-to-date." && e.Error() != "non-fast-forward update" {
+		return nil, e
+	}
+
+	cmd 		= exec.Command("git", "tag", "--sort=-creatordate", "-n")
+	cmd.Dir 	= ReturnGitLocalPath(aid, url)
+	out, e 		:= cmd.CombinedOutput()
+
+	if e != nil {
+		return nil, e
+	}
+
+	if e != nil {
+		logging.Error("cmd.Run() failed with %s\n", e)
+		return nil, e
+	}
+
+	s := string(out)
+	arr := strings.Split(s,"\n")
+
+	var max int
+	if len(arr) - 1 >= 10 {
+		max = 10
+	} else {
+		max = len(arr)-1
+	}
+
+	return arr[0:max], nil
+}
+
+func ReturnGitTag(aid int, url string) ([]string, error) {
+	// go-git pull cannot update tags
+	cmd 		:= exec.Command("git", "pull")
+	cmd.Dir 	=  ReturnGitLocalPath(aid, url)
+	_, e 		:= cmd.CombinedOutput()
+	if e != nil {
+		return nil, e
+	}
+
+	var list []string
+	r, e 	:= ReturnGitPlainOpen(aid, url)
+	if e 	!= nil {
+		return nil, e
+	}
+
+	tagrefs, e := r.Tags()
+	if e!= nil {
+		return nil, e
+	}
+
+	e = tagrefs.ForEach(func(t *plumbing.Reference) error {
+		list = append(list, strings.Split(t.Strings()[0],"/")[len(t.Strings())])
+		return nil
+	})
+
+	return  list, nil
+}
+
 func ReturnGitBranch(aid int, url string) ([]string, error) {
 	e 	:= GitPull(aid, url)
-	if e!= nil && e.Error() != "already up-to-date" {
+	if e!= nil {
 		return nil, e
 	}
 
@@ -163,18 +250,19 @@ func ReturnGitBranch(aid int, url string) ([]string, error) {
 }
 
 func GetGitLastTenCommitByBranch(aid int, url, branch string) ([]string, error) {
-	err := GitCheckoutByBranch(aid, url, branch)
-	if err != nil {
-		return nil, err
+	e 	:= GitCheckoutByBranch(aid, url, branch)
+
+	if e!= nil {
+		return nil, e
 	}
 
 	cmd 		:= exec.Command("git", "log", "--pretty=format:%h (%cr)  %ce %s", "-10")
 	cmd.Dir 	=  ReturnGitLocalPath(aid, url)
-	out, err 	:= cmd.CombinedOutput()
+	out, e 		:= cmd.CombinedOutput()
 
-	if err != nil {
-		log.Fatalf("cmd.Run() failed with %s\n", err)
-		return nil, err
+	if e != nil {
+		logging.Error("cmd.Run() failed with %s\n", e)
+		return nil, e
 	}
 
 	s := string(out)
@@ -232,7 +320,6 @@ func GitCheckoutByCommit(aid int, url, commit string) error {
 
 	s 	:= strings.Split(string(out),"\n")
 	LongHash :=	s[0]
-	fmt.Println(LongHash)
 
 	e 	= w.Checkout(&git.CheckoutOptions{
 		Hash: plumbing.NewHash(LongHash),
@@ -244,3 +331,7 @@ func GitCheckoutByCommit(aid int, url, commit string) error {
 
 	return nil
 }
+
+//func FetchVersions(aid int, url string)  {
+//
+//}

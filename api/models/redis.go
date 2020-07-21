@@ -39,7 +39,7 @@ func DelKey(key string) {
 	Rdb.Del(key).Val()
 }
 
-func GetValByKey(key string) interface{}{
+func GetValByKey(key string) interface{} {
 	return  Rdb.Get(key).Val()
 }
 

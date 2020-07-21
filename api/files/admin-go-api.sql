@@ -11,7 +11,7 @@
  Target Server Version : 50725
  File Encoding         : 65001
 
- Date: 22/06/2020 08:16:19
+ Date: 21/07/2020 19:39:48
 */
 
 SET NAMES utf8mb4;
@@ -26,14 +26,14 @@ CREATE TABLE `app` (
   `name` varchar(64) NOT NULL DEFAULT '',
   `deploy_type` tinyint(4) NOT NULL,
   `tid` int(11) NOT NULL DEFAULT '0' COMMENT '项目类型id',
+  `env_id` tinyint(4) NOT NULL,
   `active` tinyint(4) NOT NULL DEFAULT '0' COMMENT '是否启用项目',
   `enable_sync` tinyint(4) NOT NULL DEFAULT '0' COMMENT '是否需要初始化',
   `desc` varchar(128) NOT NULL DEFAULT '' COMMENT '说明',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `env_id` tinyint(4) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COMMENT='项目列表';
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COMMENT='项目列表';
 
 
 -- ----------------------------
@@ -44,9 +44,13 @@ CREATE TABLE `app_deploy` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(64) NOT NULL DEFAULT '',
   `tid` int(11) NOT NULL DEFAULT '0' COMMENT '发布模板id',
-  `repo_branch` varchar(128) NOT NULL DEFAULT '' COMMENT '项目分支',
-  `repo_commit` varchar(255) NOT NULL DEFAULT '' COMMENT '项目commit id号',
+  `git_type` varchar(32) NOT NULL DEFAULT '' COMMENT 'branch or tag',
+  `version` varchar(64) NOT NULL DEFAULT '',
+  `tag_branch` varchar(128) NOT NULL DEFAULT '' COMMENT '项目分支',
+  `commit` varchar(255) NOT NULL DEFAULT '' COMMENT '项目commit id号',
   `status` tinyint(4) NOT NULL DEFAULT '0' COMMENT '状态 1: 新建提单， 2: 审核通过, 3:审核失败, 4:上线失败 ,5:上线成功',
+  `is_pass` tinyint(4) NOT NULL DEFAULT '0' COMMENT '审核是否通过',
+  `reason` varchar(255) NOT NULL COMMENT '审核意见',
   `desc` varchar(128) NOT NULL DEFAULT '' COMMENT '说明',
   `operator` int(11) NOT NULL DEFAULT '0' COMMENT '申请者',
   `review` int(11) NOT NULL DEFAULT '0' COMMENT '审核者',
@@ -54,7 +58,7 @@ CREATE TABLE `app_deploy` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COMMENT='应用发布信息表';
+) ENGINE=InnoDB AUTO_INCREMENT=66 DEFAULT CHARSET=utf8mb4 COMMENT='应用发布信息表';
 
 
 -- ----------------------------
@@ -71,6 +75,7 @@ CREATE TABLE `app_sync_value` (
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COMMENT='业务初始变量表';
+
 
 
 -- ----------------------------
@@ -104,25 +109,6 @@ CREATE TABLE `app_value` (
 
 
 -- ----------------------------
--- Table structure for certificate_info
--- ----------------------------
-DROP TABLE IF EXISTS `certificate_info`;
-CREATE TABLE `certificate_info` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `did` int(11) NOT NULL DEFAULT '0' COMMENT '域名id',
-  `name` varchar(64) NOT NULL COMMENT '证书',
-  `channel` varchar(255) NOT NULL COMMENT '申请渠道',
-  `start_time` datetime NOT NULL COMMENT '证书申请时间',
-  `end_time` datetime NOT NULL COMMENT '证书到期时间',
-  `status` tinyint(4) NOT NULL DEFAULT '0' COMMENT '是否生效',
-  `desc` varchar(128) NOT NULL DEFAULT '' COMMENT '说明',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COMMENT='证书表';
-
-
--- ----------------------------
 -- Table structure for config_env
 -- ----------------------------
 DROP TABLE IF EXISTS `config_env`;
@@ -136,7 +122,6 @@ CREATE TABLE `config_env` (
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COMMENT='环境类型';
 
 
-
 -- ----------------------------
 -- Table structure for deploy_extend
 -- ----------------------------
@@ -145,21 +130,25 @@ CREATE TABLE `deploy_extend` (
   `dtid` int(11) NOT NULL AUTO_INCREMENT,
   `aid` int(11) NOT NULL DEFAULT '0' COMMENT '项目id',
   `tag` varchar(64) NOT NULL COMMENT '多功能预留字段，jar包作为打包版本号',
-  `template_name` varchar(64) NOT NULL DEFAULT '',
+  `extend` tinyint(4) NOT NULL DEFAULT '0' COMMENT '1 ： 常规发布\n2 ： 自定义发布',
+  `template_name` varchar(64) NOT NULL DEFAULT '' COMMENT '发布模板名字',
   `dst_dir` varchar(64) NOT NULL DEFAULT '' COMMENT '目标主机部署路径',
   `dst_repo` varchar(64) NOT NULL DEFAULT '' COMMENT '目标主机仓库路径',
   `host_ids` varchar(128) NOT NULL DEFAULT '' COMMENT '发布模板绑定主机，多台以逗号分隔',
   `repo_url` varchar(128) NOT NULL DEFAULT '' COMMENT '项目git url',
   `versions` int(11) NOT NULL DEFAULT '0' COMMENT '项目保留历史版本数',
-  `pre_code` varchar(255) NOT NULL DEFAULT '' COMMENT '代码clone前执行的命令',
+  `filter_rule` varchar(1024) NOT NULL DEFAULT '' COMMENT '文件目录规则',
+  `custom_envs` varchar(1024) NOT NULL DEFAULT '' COMMENT '模板变量',
+  `pre_code` varchar(2048) NOT NULL DEFAULT '' COMMENT 'extend 1 : 代码clone前执行的命令\nextend 2 : 发布平台所在机器执行动作',
   `post_code` varchar(255) NOT NULL DEFAULT '' COMMENT '代码clone后执行的命令',
-  `pre_deploy` varchar(255) NOT NULL DEFAULT '' COMMENT '发布前执行命令',
+  `pre_deploy` varchar(2048) NOT NULL DEFAULT '' COMMENT 'extend 1 ：发布前执行命令\nextend 2 ： 发布主机执行的动作',
   `post_deploy` varchar(255) NOT NULL DEFAULT '' COMMENT '发布后执行命令',
   `enable_check` tinyint(4) NOT NULL DEFAULT '0' COMMENT '是否开启审核',
+  `notify_id` int(11) NOT NULL DEFAULT '0' COMMENT '应用发布成功或失败结果通知调用通道id',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`dtid`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COMMENT='项目发布模板表';
+) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COMMENT='项目发布模板表';
 
 
 
@@ -170,16 +159,16 @@ DROP TABLE IF EXISTS `domain_info`;
 CREATE TABLE `domain_info` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(64) NOT NULL COMMENT '域名',
-  `channel` varchar(255) NOT NULL COMMENT '申请渠道',
-  `start_time` datetime NOT NULL COMMENT '域名申请时间',
-  `end_time` datetime NOT NULL COMMENT '域名到期时间',
+  `cert_name` varchar(255) NOT NULL COMMENT '当is_cert为1时，用于检测证书有效性的域名',
+  `domain_end_time` datetime NOT NULL COMMENT '域名到期时间',
+  `cert_end_time` datetime NOT NULL COMMENT '域名证书到期时间',
   `status` tinyint(4) NOT NULL DEFAULT '0' COMMENT '是否生效',
+  `is_cert` tinyint(4) NOT NULL DEFAULT '0' COMMENT '是否有证书',
   `desc` varchar(128) NOT NULL DEFAULT '' COMMENT '说明',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COMMENT='域名表';
-
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COMMENT='域名信息表';
 
 -- ----------------------------
 -- Table structure for host
@@ -201,7 +190,7 @@ CREATE TABLE `host` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COMMENT='主机表';
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COMMENT='主机表';
 
 
 -- ----------------------------
@@ -217,8 +206,7 @@ CREATE TABLE `host_app` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COMMENT='主机业务关联表';
-
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COMMENT='主机业务关联表';
 
 
 -- ----------------------------
@@ -235,7 +223,6 @@ CREATE TABLE `host_role` (
 ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COMMENT='主机类型';
 
 
-
 -- ----------------------------
 -- Table structure for menu_permissions
 -- ----------------------------
@@ -250,7 +237,7 @@ CREATE TABLE `menu_permissions` (
   `icon` varchar(50) NOT NULL DEFAULT '' COMMENT '菜单图标',
   `desc` varchar(128) NOT NULL DEFAULT '' COMMENT '简介',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=129 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=134 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Records of menu_permissions
@@ -258,9 +245,9 @@ CREATE TABLE `menu_permissions` (
 BEGIN;
 INSERT INTO `menu_permissions` VALUES (1, '系统管理', 0, 1, '', '', 'setting', '');
 INSERT INTO `menu_permissions` VALUES (2, '菜单管理', 0, 1, '', '', 'menu', '');
-INSERT INTO `menu_permissions` VALUES (9, '用户列表', 1, 1, '', '/user/list', 'team', '用户列表');
-INSERT INTO `menu_permissions` VALUES (16, '角色列表', 1, 1, '', '/user/role', 'lock', '角色列表。');
-INSERT INTO `menu_permissions` VALUES (17, '权限列表', 1, 1, '', '/user/perm', 'security-scan', '权限列表');
+INSERT INTO `menu_permissions` VALUES (9, '用户列表', 1, 1, '', '/system/list', 'team', '用户列表');
+INSERT INTO `menu_permissions` VALUES (16, '角色列表', 1, 1, '', '/system/role', 'lock', '角色列表。');
+INSERT INTO `menu_permissions` VALUES (17, '权限列表', 1, 1, '', '/system/perm', 'security-scan', '权限列表');
 INSERT INTO `menu_permissions` VALUES (18, '一级菜单', 2, 1, '', '/menu/menu', 'tag', '一级菜单');
 INSERT INTO `menu_permissions` VALUES (19, '二级菜单', 2, 1, '', '/menu/submenu', 'tags', '二级菜单');
 INSERT INTO `menu_permissions` VALUES (24, '用户添加', 9, 2, 'user-add', '', '', '添加用户');
@@ -282,7 +269,7 @@ INSERT INTO `menu_permissions` VALUES (62, '应用配置', 0, 1, '', '', 'tool',
 INSERT INTO `menu_permissions` VALUES (63, '应用发布', 0, 1, '', '', 'deployment-unit', '');
 INSERT INTO `menu_permissions` VALUES (64, '环境管理', 62, 1, '', '/config/environment', 'environment', '环境管理');
 INSERT INTO `menu_permissions` VALUES (65, '应用配置', 62, 1, '', '/config/app', 'project', '应用配置');
-INSERT INTO `menu_permissions` VALUES (67, '应该发布', 63, 1, '', '/deploy/app', 'cloud-sync', '应该发布列表页');
+INSERT INTO `menu_permissions` VALUES (67, '应用发布', 63, 1, '', '/deploy/app', 'cloud-sync', '应该发布列表页');
 INSERT INTO `menu_permissions` VALUES (68, '用户列表', 9, 2, 'user-list', '', '', '获取用户列表页');
 INSERT INTO `menu_permissions` VALUES (69, '发布列表页', 67, 2, 'deploy-app-list', '', '', '应用发布列表页');
 INSERT INTO `menu_permissions` VALUES (70, '发布提单', 67, 2, 'deploy-app-add', '', '', '应用发布提单');
@@ -328,20 +315,19 @@ INSERT INTO `menu_permissions` VALUES (111, '修改应用类型', 108, 2, 'app-t
 INSERT INTO `menu_permissions` VALUES (112, '删除应用类型', 108, 2, 'app-type-del', '', '', '删除应用类型');
 INSERT INTO `menu_permissions` VALUES (113, '域名管理', 0, 1, '', '', 'google', '');
 INSERT INTO `menu_permissions` VALUES (114, '域名列表', 113, 1, '', '/domain/list', 'chrome', '域名信息汇总页');
-INSERT INTO `menu_permissions` VALUES (115, '证书列表', 113, 1, '', '/domain/certificate', 'security-scan', '证书信息页');
 INSERT INTO `menu_permissions` VALUES (116, '域名列表', 114, 2, 'domain-info-list', '', '', '域名列表');
 INSERT INTO `menu_permissions` VALUES (117, '添加域名', 114, 2, 'domain-info-add', '', '', '添加域名');
 INSERT INTO `menu_permissions` VALUES (118, '修改域名信息', 114, 2, 'domain-info-edit', '', '', '修改域名信息');
 INSERT INTO `menu_permissions` VALUES (119, '删除域名', 114, 2, 'domain-info-del', '', '', '删除域名');
-INSERT INTO `menu_permissions` VALUES (120, '证书列表', 115, 2, 'domain-cert-list', '', '', '证书列表');
-INSERT INTO `menu_permissions` VALUES (121, '添加证书', 115, 2, 'domain-cert-add', '', '', '添加证书');
-INSERT INTO `menu_permissions` VALUES (122, '修改证书', 115, 2, 'domain-cert-edit', '', '', '修改证书');
-INSERT INTO `menu_permissions` VALUES (123, '删除证书', 115, 2, 'domain-cert-del', '', '', '删除证书');
 INSERT INTO `menu_permissions` VALUES (124, '任务计划', 0, 1, '', '', 'schedule', '');
 INSERT INTO `menu_permissions` VALUES (125, '任务列表', 124, 1, '', '/schedule/list', 'bars', '任务列表');
 INSERT INTO `menu_permissions` VALUES (126, '新增任务 ', 125, 2, 'schedule-job-add', '', '', '新增Job');
 INSERT INTO `menu_permissions` VALUES (127, '任务修改', 125, 2, 'schedule-job-edit', '', '', '修改job');
 INSERT INTO `menu_permissions` VALUES (128, '删除任务', 125, 2, 'schedule-job-del', '', '', 'Job删除');
+INSERT INTO `menu_permissions` VALUES (130, '系统设置', 1, 1, '', '/system/setting', 'key', '系统设置');
+INSERT INTO `menu_permissions` VALUES (131, '机器人通道', 1, 1, '', '/system/robot', 'robot', '机器人告警渠道 钉钉 微信 等');
+INSERT INTO `menu_permissions` VALUES (132, '发布请求', 67, 2, 'deploy-app-request', '', '', '发布请求');
+INSERT INTO `menu_permissions` VALUES (133, '回滚请求', 67, 2, 'undo-app-request', '', '', '回滚请求');
 COMMIT;
 
 -- ----------------------------
@@ -359,8 +345,7 @@ CREATE TABLE `notify` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COMMENT='通知信息表';
-
+) ENGINE=InnoDB AUTO_INCREMENT=44 DEFAULT CHARSET=utf8mb4 COMMENT='通知信息表';
 
 
 -- ----------------------------
@@ -376,6 +361,37 @@ CREATE TABLE `role` (
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COMMENT='角色表';
 
 
+-- ----------------------------
+-- Table structure for role_env_app
+-- ----------------------------
+DROP TABLE IF EXISTS `role_env_app`;
+CREATE TABLE `role_env_app` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `rid` int(11) NOT NULL DEFAULT '0' COMMENT '角色id',
+  `eid` int(11) NOT NULL DEFAULT '0' COMMENT '环境id',
+  `app_ids` varchar(255) NOT NULL DEFAULT '' COMMENT '角色应用权限，多个应用以,分割， all表示所有应用，应用依赖环境',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COMMENT='角色-环境(env)-应用(app)关联表';
+
+
+
+-- ----------------------------
+-- Table structure for role_env_host
+-- ----------------------------
+DROP TABLE IF EXISTS `role_env_host`;
+CREATE TABLE `role_env_host` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `rid` int(11) NOT NULL DEFAULT '0' COMMENT '角色id',
+  `eid` int(11) NOT NULL DEFAULT '0' COMMENT '环境id',
+  `host_ids` varchar(255) NOT NULL DEFAULT '' COMMENT '角色主机权限，多个主机以,分割， all表示所有主机，主机依赖环境',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COMMENT='角色-环境(env)-主机(host)关联表';
+
+
 
 -- ----------------------------
 -- Table structure for role_permission_rel
@@ -386,8 +402,38 @@ CREATE TABLE `role_permission_rel` (
   `rid` int(11) NOT NULL DEFAULT '0' COMMENT '角色id',
   `pid` int(11) NOT NULL DEFAULT '0' COMMENT '权限id',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=56 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=86 DEFAULT CHARSET=utf8;
 
+-- ----------------------------
+-- Table structure for setting_robot
+-- ----------------------------
+DROP TABLE IF EXISTS `setting_robot`;
+CREATE TABLE `setting_robot` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) NOT NULL,
+  `webhook` varchar(128) NOT NULL DEFAULT '' COMMENT '各种机器人的webhook，如果是企业微信应用表示企业corpid',
+  `secret` varchar(128) NOT NULL DEFAULT '' COMMENT 'type 1: 钉钉机器人的 secret\ntype 4: 企业微信应用 secret',
+  `keyword` varchar(128) NOT NULL DEFAULT '' COMMENT 'type 2: 钉钉机器人关键字\ntype 4：企业微信应用的agentid',
+  `status` tinyint(4) NOT NULL DEFAULT '0' COMMENT '状态',
+  `type` tinyint(4) NOT NULL DEFAULT '0' COMMENT '1： 钉钉签名类型机器人 2：钉钉关键字机器人 3： 钉钉acl机器人 4：企业微信应用 4：微信机器人',
+  `desc` varchar(255) NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4;
+
+
+-- ----------------------------
+-- Table structure for settings
+-- ----------------------------
+DROP TABLE IF EXISTS `settings`;
+CREATE TABLE `settings` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) NOT NULL,
+  `value` varchar(2048) NOT NULL DEFAULT '',
+  `desc` varchar(255) NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `key` (`name`)
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------
 -- Table structure for task
@@ -410,8 +456,7 @@ CREATE TABLE `task` (
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `task_name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COMMENT='任务列表';
-
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COMMENT='任务列表';
 
 
 -- ----------------------------
@@ -426,9 +471,9 @@ CREATE TABLE `task_history` (
   `run_time` varchar(20) NOT NULL DEFAULT '' COMMENT '任务执行时长',
   `output` mediumtext NOT NULL COMMENT '任务执行输出信息',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=198 DEFAULT CHARSET=utf8mb4 COMMENT='任务执行历史信息表';
-
+  PRIMARY KEY (`id`),
+  KEY `task_host_index` (`task_id`,`host_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=15747 DEFAULT CHARSET=utf8mb4 COMMENT='任务执行历史信息表';
 
 -- ----------------------------
 -- Table structure for user
@@ -449,5 +494,6 @@ CREATE TABLE `user` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8 COMMENT='用户表';
+
 
 SET FOREIGN_KEY_CHECKS = 1;

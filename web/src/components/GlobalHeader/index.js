@@ -1,4 +1,5 @@
 import {Layout, Menu, Icon, Dropdown, Avatar, Button, Badge, List} from 'antd';
+import { Link } from 'react-router-dom';
 import moment from 'moment';
 import styles from './index.less'
 
@@ -7,15 +8,14 @@ const { Header } = Layout;
 const GlobalHeader = ({ title, user, onMenuClick, notifies, read, loading, handleReadAll, handleRead}) => {
   const menu = (
     <Menu selectedKeys={[]} onClick={onMenuClick}>
-      <Menu.Item disabled>
-        <Icon type="user" />个人中心
+      <Menu.Item>
+        <Link to="/welcome/info">
+          <Icon type="user" />个人中心
+        </Link>
       </Menu.Item>
       <Menu.Item disabled>
         <Icon type="setting" />设置
       </Menu.Item>
-      {/*<Menu.Item key="triggerError">*/}
-        {/*<Icon type="close-circle" />触发报错*/}
-      {/*</Menu.Item>*/}
       <Menu.Divider />
       <Menu.Item key="logout">
         <Icon type="logout" />退出登录

@@ -5,9 +5,14 @@ import "time"
 type AppDeploy struct {
 	Model
 	Tid				int
+	GitType			string
 	Name      		string
-	RepoBranch 		string
-	RepoCommit 		string
+	TagBranch 		string
+	Commit 		    string
+	IsPass			int
+	Version			string
+	Reason        	string
+	Desc 			string
 	Status			int
 	Operator		int
 	Review          int

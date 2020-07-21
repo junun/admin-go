@@ -3,28 +3,19 @@ package admin
 import (
 	"api/middleware"
 	"api/models"
+	"api/pkg/curlwhois"
 	"api/pkg/util"
-	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/likexian/whois-go"
+	"github.com/likexian/whois-parser-go"
 	"strings"
 	"time"
 )
 
 type DomainInfoResource struct {
 	Name    	string    	`form:"Name"`
-	Channel    	string    	`form:"Channel"`
-	StartTime   string    	`form:"StartTime"`
-	EndTime     string    	`form:"EndTime"`
-	Status		int			`form:"Status"`
-	Desc 		string    	`form:"Desc"`
-}
-
-type DomainCertResource struct {
-	Name    	string    	`form:"Name"`
-	Did 		int 		`form:"Did"`
-	Channel    	string    	`form:"Channel"`
-	StartTime   string    	`form:"StartTime"`
-	EndTime     string    	`form:"EndTime"`
+	IsCert		int			`form:"IsCert"`
+	CertName 	string    	`form:"CertName"`
 	Status		int			`form:"Status"`
 	Desc 		string    	`form:"Desc"`
 }
@@ -82,31 +73,49 @@ func AddDomainInfo(c *gin.Context)  {
 	}
 
 	data.Name = strings.TrimSpace(data.Name)
-	// 域名唯一性检查
-	models.DB.Model(&models.DomainInfo{}).
-		Where("name = ?", data.Name).Find(&domain)
+	data.CertName = strings.TrimSpace(data.CertName)
+	// 证书唯一性检查
+	if data.IsCert == 1 {
+		models.DB.Model(&models.DomainInfo{}).
+			Where("cert_name = ?", data.CertName ).Find(&domain)
 
-	if domain.ID > 0 {
-		util.JsonRespond(500, "重复的域名，请检查！", "", c)
-		return
+		if domain.ID > 0 {
+			util.JsonRespond(500, "重复的证书检查，请检查！", "", c)
+			return
+		}
 	}
-
-	start, _	:= time.Parse(time.RFC3339, data.StartTime)
-	end, _		:= time.Parse(time.RFC3339, data.EndTime)
 
 	domain = models.DomainInfo{
 		Name: data.Name,
-		Channel: data.Channel,
 		Status: data.Status,
-		StartTime: start,
-		EndTime: end,
+		IsCert: data.IsCert,
 		Desc: data.Desc}
 
-	e := models.DB.Save(&domain).Error
+	if data.IsCert == 1  {
+		if data.CertName == "" {
+			util.JsonRespond(500, "有证书情况必须设置检测证书有效性的二级域名！", "", c)
+			return
+		}
 
+		domain.CertName = data.CertName
+	}
+
+	//e := models.DB.Save(&domain).Error
+	//if e != nil {
+	//	util.JsonRespond(500, e.Error(), "", c)
+	//	return
+	//}
+
+	e := models.DB.Create(&domain).Error
 	if e != nil {
 		util.JsonRespond(500, e.Error(), "", c)
 		return
+	}
+
+
+	CheckDomainMaster(domain)
+	if data.IsCert == 1  {
+		CheckDomainCert(domain)
 	}
 
 	util.JsonRespond(200, "添加域名成功", "", c)
@@ -132,37 +141,58 @@ func PutDomainInfo(c *gin.Context)  {
 
 	err := c.BindJSON(&data)
 	if err != nil {
-		util.JsonRespond(500, "Invalid Edit Domain Info Data", "", c)
+		util.JsonRespond(400, "Invalid Edit Domain Info Data", "", c)
 		return
 	}
 
 	data.Name = strings.TrimSpace(data.Name)
-	// 域名唯一性检查
-	models.DB.Model(&models.DomainInfo{}).
-		Where("name = ?", data.Name).
-		Where("id != ?", c.Param("id")).Find(&domain)
+	data.CertName = strings.TrimSpace(data.CertName)
 
-	if domain.ID > 0 {
-		util.JsonRespond(500, "重复的域名，请检查！", "", c)
-		return
+	// 证书唯一性检查
+	if data.IsCert == 1 {
+		models.DB.Model(&models.DomainInfo{}).
+			Where("cert_name = ?", data.CertName ).
+			Where("id != ?", c.Param("id")).Find(&domain)
+
+		if domain.ID > 0 {
+			util.JsonRespond(500, "重复的证书检查，请检查！", "", c)
+			return
+		}
 	}
 
-	models.DB.Find(&domain, c.Param("id"))
 
-	start, _	:= time.Parse(time.RFC3339, data.StartTime)
-	end, _		:= time.Parse(time.RFC3339, data.EndTime)
+	models.DB.Find(&domain, c.Param("id"))
+	domainName 		:= domain.Name
+	certName		:= domain.CertName
 
 	domain.Name 	= data.Name
-	domain.Channel 	= data.Channel
-	domain.StartTime= start
-	domain.EndTime 	= end
+	domain.IsCert	= data.IsCert
 	domain.Status 	= data.Status
 	domain.Desc 	= data.Desc
+
+	if data.IsCert == 1  {
+		if data.CertName == "" {
+			util.JsonRespond(500, "有证书情况必须设置检测证书有效性的二级域名！", "", c)
+			return
+		}
+	}
+
+	if domain.CertName != data.CertName {
+		domain.CertName = data.CertName
+	}
 
 	e := models.DB.Save(&domain).Error
 	if e != nil {
 		util.JsonRespond(500, e.Error(), "", c)
 		return
+	}
+
+	if data.Name != domainName {
+		CheckDomainMaster(domain)
+	}
+
+	if data.CertName != certName {
+		CheckDomainCert(domain)
 	}
 
 	util.JsonRespond(200, "修改域名成功", "", c)
@@ -192,217 +222,116 @@ func DelDomainInfo(c *gin.Context)  {
 }
 
 
-// @Tags 域名管理
-// @Description 证书列表
-// @Summary  证书列表
-// @Produce  json
-// @Param Authorization header string true "token"
-// @Success 200 {string} string {"code": 200, "message": "", "data": {}}
-// @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
-// @Router /admin/domain/cert [get]
-func GetDomainCret(c *gin.Context)  {
-	if !middleware.PermissionCheckMiddleware(c,"domain-cert-list") {
-		util.JsonRespond(403, "请求资源被拒绝", "", c)
-		return
-	}
-
-	var cert []models.CertificateInfo
-	var count int
-	maps := make(map[string]interface{})
-	data := make(map[string]interface{})
-
-	models.DB.Model(&models.CertificateInfo{}).Where(maps).
-		Offset(util.GetPage(c)).Limit(util.GetPageSize(c)).Find(&cert)
-	models.DB.Model(&models.CertificateInfo{}).Where(maps).Count(&count)
-
-	data["lists"] = cert
-	data["count"] = count
-
-	util.JsonRespond(200, "", data, c)
-}
-
-// @Tags 域名管理
-// @Description 证书新增
-// @Summary  证书新增
-// @Produce  json
-// @Param Authorization header string true "token"
-// @Param Data body admin.DomainCertResource true "证书信息"
-// @Success 200 {string} string {"code": 200, "message": "", "data": {}}
-// @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
-// @Router /admin/demo/cert [post]
-func AddDomainCret(c *gin.Context)  {
-	if !middleware.PermissionCheckMiddleware(c,"domain-cert-add") {
-		util.JsonRespond(403, "请求资源被拒绝", "", c)
-		return
-	}
-	var data DomainCertResource
-	var cert models.CertificateInfo
-
-	err := c.BindJSON(&data)
-	if err != nil {
-		util.JsonRespond(500, "Invalid Add Cert Info Data", "", c)
-		return
-	}
-
-	data.Name = strings.TrimSpace(data.Name)
-	// 域名唯一性检查
-	models.DB.Model(&models.DomainInfo{}).
-		Where("name = ?", data.Name).Find(&cert)
-
-	if cert.ID > 0 {
-		util.JsonRespond(500, "重复的证书名，请检查！", "", c)
-		return
-	}
-
-	start, _	:= time.Parse(time.RFC3339, data.StartTime)
-	end, _		:= time.Parse(time.RFC3339, data.EndTime)
-
-	cert = models.CertificateInfo{
-		Name: data.Name,
-		Did:data.Did,
-		Channel: data.Channel,
-		Status: data.Status,
-		StartTime: start,
-		EndTime: end,
-		Desc: data.Desc}
-
-	e := models.DB.Save(&cert).Error
-
-	if e != nil {
-		util.JsonRespond(500, e.Error(), "", c)
-		return
-	}
-
-	util.JsonRespond(200, "添加域名成功", "", c)
-}
-
-// @Tags 域名管理
-// @Description 证书修改
-// @Summary  证书修改
-// @Produce  json
-// @Param Authorization header string true "token"
-// @Param id path int true "证书ID"
-// @Param Data body admin.DomainCertResource true "证书信息"
-// @Success 200 {string} string {"code": 200, "message": "", "data": {}}
-// @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
-// @Router /admin/domain/cert/{id} [put]
-func PutDomainCret(c *gin.Context)  {
-	if !middleware.PermissionCheckMiddleware(c,"domain-cert-edit") {
-		util.JsonRespond(403, "请求资源被拒绝", "", c)
-		return
-	}
-	var data DomainCertResource
-	var cert models.CertificateInfo
-
-	err := c.BindJSON(&data)
-	if err != nil {
-		util.JsonRespond(500, "Invalid Edit Domain Cert Data", "", c)
-		return
-	}
-
-	data.Name = strings.TrimSpace(data.Name)
-	// 域名唯一性检查
-	models.DB.Model(&models.DomainInfo{}).
-		Where("name = ?", data.Name).
-		Where("id != ?", c.Param("id")).Find(&cert)
-
-	if cert.ID > 0 {
-		util.JsonRespond(500, "重复的证书名，请检查！", "", c)
-		return
-	}
-
-	models.DB.Find(&cert, c.Param("id"))
-
-	start, _	:= time.Parse(time.RFC3339, data.StartTime)
-	end, _		:= time.Parse(time.RFC3339, data.EndTime)
-
-	cert.Name 		= data.Name
-	cert.Did		= data.Did
-	cert.Channel 	= data.Channel
-	cert.StartTime	= start
-	cert.EndTime 	= end
-	cert.Status 	= data.Status
-	cert.Desc 		= data.Desc
-
-	e := models.DB.Save(&cert).Error
-	if e != nil {
-		util.JsonRespond(500, e.Error(), "", c)
-		return
-	}
-
-	util.JsonRespond(200, "修改证书成功", "", c)
-}
-
-// @Tags 域名管理
-// @Description 证书删除
-// @Summary  证书删除
-// @Produce  json
-// @Param Authorization header string true "token"
-// @Param id path int true "证书ID"
-// @Success 200 {string} string {"code": 200, "message": "", "data": {}}
-// @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
-// @Router /admin/domain/cert/{id} [delete]
-func DelDomainCret(c *gin.Context)  {
-	if !middleware.PermissionCheckMiddleware(c,"domain-cert-del") {
-		util.JsonRespond(403, "请求资源被拒绝", "", c)
-		return
-	}
-	e := models.DB.Delete(models.CertificateInfo{}, "id = ?", c.Param("id")).Error
-	if e != nil {
-		util.JsonRespond(500, e.Error(), "", c)
-		return
-	}
-
-	util.JsonRespond(200, "删除证书成功", "", c)
-}
-
 // 定时任务 每天检查域名和证书是否到期
 // 到期前一个月开始每天发送通知，提醒续费或者更新证书
 func CheckDomainAndCret()   {
-	var domain []models.DomainInfo
-	var cert []models.CertificateInfo
+	var domains []models.DomainInfo
 
-	models.DB.Model(&models.DomainInfo{}).Where("status=1").Find(&domain)
-	models.DB.Model(&models.CertificateInfo{}).Where("status=1").Find(&cert)
-
-	if len(domain) == 0 && len(cert) == 0 {
+	models.DB.Model(&models.DomainInfo{}).Where("status=1").Find(&domains)
+	if len(domains) == 0 {
 		return
+	}
+
+	if len(domains) > 0 {
+		for _,domain:= range domains {
+			// 检验域名
+			CheckDomainMaster(domain)
+
+			// 检测证书
+			if domain.IsCert == 1 && domain.CertName != "" {
+				CheckDomainCert(domain)
+			}
+		}
+	}
+}
+
+func CheckDomainCert(domain models.DomainInfo) {
+	cert, e := util.ParseRemoteCertificate(domain.CertName + ":443",10)
+	if e!=nil {
+		models.MakeNotify(1, 2,"定时任务异常" + e.Error(),"域名" + domain.Name + "证书有效性信息检查异常，请检测！","" )
 	}
 
 	now 			:= time.Now()
 	nowAddOneMonth 	:= now.AddDate(0, 1, 0)
-	if len(domain) > 0 {
-		for _,v := range domain {
-			if (v.EndTime.Before(nowAddOneMonth)) {
-				// 执行消息通知逻辑
-				// text message
-				fmt.Println(v.Name)
-				textReq := models.CreateOapiRobotSendTextRequest(
-					"@" + models.DingUser + "域名" + v.Name + "快要到期了，请及时处理",
-					models.DingList,
-					false)
-				_, e := models.SecretDing.Execute(textReq)
-				if e != nil {
-					models.MakeNotify(1, 2,"发送通知异常" + e.Error(),"域名" + v.Name + "快要到期了，请及时处理","" )
-				}
-			}
+
+	if (cert.NotAfter.Before(nowAddOneMonth)) {
+		// 执行消息通知逻辑
+		// text message
+		e := models.DingtalkSentChannel(0, "@" + models.DingUser + "SSl证书" + domain.Name + "快要到期了，请及时处理", models.DingList, false)
+		if e != nil {
+			models.MakeNotify(1, 2,"发送通知异常","SSl证书" + domain.Name + "快要到期了，请及时处理","" )
 		}
 	}
 
-	if len(cert) > 0 {
-		for _,v := range cert {
-			if (v.EndTime.Before(nowAddOneMonth)) {
-				// 执行消息通知逻辑
-				// text message
-				textReq := models.CreateOapiRobotSendTextRequest(
-					"@" + models.DingUser + "SSl证书" + v.Name + "快要到期了，请及时处理",
-					models.DingList,
-					false)
-				_, e 	:= models.SecretDing.Execute(textReq)
-				if e != nil {
-					models.MakeNotify(1, 2,"发送通知异常","SSl证书" + v.Name + "快要到期了，请及时处理","" )
-				}
-			}
+	if domain.CertEndTime != cert.NotAfter {
+		e := models.DB.Model(&domain).Updates(map[string]interface{}{"cert_end_time": cert.NotAfter}).Error
+		if e != nil {
+			models.MakeNotify(1, 2,"更新域名证书信息异常" + e.Error(),"域名" + domain.Name + "更新域名证书信息异常，请及时处理","" )
+		}
+	}
+}
+
+func CheckDomainMaster(domain models.DomainInfo)  {
+	resWho, e 		:= whois.Whois(domain.Name)
+	if e != nil {
+		// 启用备用检测方式
+		CheckDomainBackup(domain)
+		return
+	}
+
+	resParse, e := whoisparser.Parse(resWho)
+	if e != nil {
+		models.MakeNotify(1, 2,"定时任务异常" + e.Error(),"域名" + domain.Name + "有效性信息解析错误请检测！","" )
+
+		// 启用备用检测方式
+		CheckDomainBackup(domain)
+		return
+	}
+
+	if resParse.Domain.ExpirationDate == "0001-01-01 00:00:00 +0000 UTC" {
+		// 启用备用检测方式
+		CheckDomainBackup(domain)
+		return
+	}
+
+	handDomainParse(domain, resParse.Domain.ExpirationDate)
+}
+
+func CheckDomainBackup(domain models.DomainInfo)  {
+	e,  res := curlwhois.Whois(domain.Name)
+	if e != nil {
+		_ = models.DingtalkSentChannel(0, "@" + models.DingUser + "域名" + domain.Name + "有效性信息检测主备都失败，请检查！", models.DingList, false)
+
+		models.MakeNotify(1, 2,"定时任务域名检测错误" + e.Error(),"域名" + domain.Name + "有效性信息检测主备都失败，请检查！","" )
+
+		return
+	}
+
+	handDomainParse(domain, res.ExpirationDate)
+}
+
+func handDomainParse(domain models.DomainInfo, timestr string)  {
+	now 			:= time.Now()
+	nowAddOneMonth 	:= now.AddDate(0, 1, 0)
+	end, _  := time.Parse(time.RFC3339, timestr)
+	if (end.Before(nowAddOneMonth)) {
+		// 执行消息通知逻辑
+		// text message
+		e := models.DingtalkSentChannel(0, "@" + models.DingUser + "域名" + domain.Name + "快要到期了，请及时处理", models.DingList, false)
+		if e != nil {
+			models.MakeNotify(1, 2,"发送通知异常" + e.Error(),"域名" + domain.Name + "快要到期了，请及时处理","" )
+		}
+	}
+
+	if domain.DomainEndTime != end {
+		domain.DomainEndTime = end
+		e := models.DB.Model(&domain).Updates(map[string]interface{}{"domain_end_time": end}).Error
+		//e 	:= models.DB.Model(&models.DomainInfo{}).Where("id = ?", domain.ID).Updates(map[string]interface{}{"domain_end_time": end}).Error
+		//e := models.DB.Table("domain_info").Where("id = ?", domain.ID).Updates(map[string]interface{}{"domain_end_time": end}).Error
+		// 不要使用该方式更新，尤其在证书检查那边，不然会造成前后内容覆盖
+		//e := models.DB.Save(&domain).Error
+		if e != nil {
+			models.MakeNotify(1, 2,"更新域名信息异常" + e.Error(),"域名" + domain.Name + "更新域名信息异常，请及时处理","" )
 		}
 	}
 }

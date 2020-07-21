@@ -36,17 +36,18 @@ const codeMessage = {
 // };
 
 const checkStatus = response => {
-  if (response.status >= 200 && response.status < 300 || response.status == 500) {
-    return response;
-  }
-  const errortext = codeMessage[response.status] || response.statusText;
-  notification.error({
-    message: `请求错误 ${response.status}: ${response.url}`,
-    description: errortext,
-  });
-  const error = new Error(errortext);
-  error.name = response.status;
-  throw error;
+  // if (response.status >= 200 && response.status < 300 || response.status == 500 || response.status == 403) {
+  //   return response;
+  // }
+  return response;
+  // const errortext = codeMessage[response.status] || response.statusText;
+  // notification.error({
+  //   message: `请求错误 ${response.status}: ${response.url}`,
+  //   description: errortext,
+  // });
+  // const error = new Error(errortext);
+  // error.name = response.status;
+  // throw error;
 };
 
 

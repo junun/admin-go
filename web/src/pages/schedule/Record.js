@@ -20,7 +20,6 @@ class Record extends React.Component {
   }
 
   componentDidMount() {
-    console.log(this.props.info);
     const { dispatch } = this.props;
     dispatch({
       type: 'schedule/getScheduleHis',
@@ -57,7 +56,6 @@ class Record extends React.Component {
 
   render() {
     const {scheduleHisList, scheduleHisLoading } = this.props;
-    console.log(scheduleHisList);
     return (
       <Modal
         visible

@@ -15,8 +15,6 @@ import Info from './Info';
 const dateFormat = 'YYYY-MM-DD';
 const FormItem = Form.Item;
 
-
-
 @connect(({ loading, schedule, host }) => {
     return {
       scheduleList: schedule.scheduleList,
@@ -467,6 +465,7 @@ class SchedulePage extends React.Component {
                   <Select
                     mode="multiple"
                     style={{ width: '100%' }}
+                    filterOption={(input, option) => option.props.children[0].toLowerCase().indexOf(input.toLowerCase()) >= 0}
                   >
                     {hostList.map(item => (
                       <Select.Option key={item.id} value={item.id}>

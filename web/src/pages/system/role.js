@@ -6,6 +6,8 @@ import {connect} from "dva";
 import {timeTrans, hasPermission} from "@/utils/globalTools"
 import styles from './role.css';
 import PagePerm from "./PagePerm";
+import AppPerm from './AppPerm';
+import HostPerm from './HostPerm';
 
 const FormItem = Form.Item;
 const Option = Select.Option;
@@ -31,6 +33,8 @@ class RolePage extends React.Component {
     roleId: '',
     checkedKeys: [],
     pagePermVisible: false,
+    appPermVisible: false,
+    hostPermVisible: false,
     rid:0,
   };
 
@@ -108,6 +112,18 @@ class RolePage extends React.Component {
     });
   };
 
+  switchAppPerm = () => {
+    this.setState({ 
+      appPermVisible: !this.state.appPermVisible,
+    });
+  }
+
+  switchHostPerm = () => {
+    this.setState({ 
+      hostPermVisible: !this.state.hostPermVisible,
+    });
+  }
+
   //显示编辑界面
   handleEdit = (values) => {
     values.title =  '编辑角色-' + values.Name;
@@ -117,21 +133,15 @@ class RolePage extends React.Component {
     });
     
   };
-  
+
   //显示权限界面
   handlePermission = (values) => {
-    values.title =  '权限-' + values.Name;
+    values.title =  '功能权限-' + values.Name;
     this.setState({ 
       editCacheData: values,
       pagePermVisible: true,
       rid: values.id,
     });
-
-    // const { dispatch } = this.props;
-    // dispatch({ 
-    //   type: 'user/getRolePerms',
-    //   payload: values.id
-    // });
   };
 
   //取消权限界面
@@ -141,6 +151,24 @@ class RolePage extends React.Component {
       type: 'user/cancelUserPermission',
     });
   };
+
+  handleAppPerm = (values) => {
+    values.title =  '应用权限-' + values.Name;
+    this.setState({ 
+      editCacheData: values,
+      appPermVisible: true,
+      rid: values.id,
+    });
+  }
+
+  handleHostPerm = (values) => {
+    values.title =  '主机权限-' + values.Name;
+    this.setState({ 
+      editCacheData: values,
+      hostPermVisible: true,
+      rid: values.id,
+    });
+  }
 
   onCheck = (values) => {
     this.setState({ 
@@ -205,7 +233,21 @@ class RolePage extends React.Component {
           {
             hasPermission('role-perm-list') && 
             <a onClick={()=>{this.handlePermission(record)}}>
-              <Icon type="environment"/>权限
+              <Icon type="tags"/>功能权限
+            </a>
+          }
+          <Divider type="vertical" />
+          {
+            hasPermission('role-perm-list') && 
+            <a onClick={()=>{this.handleAppPerm(record)}}>
+              <Icon type="ci"/>发布权限
+            </a>
+          }
+          <Divider type="vertical" />
+          {
+            hasPermission('role-perm-list') && 
+            <a onClick={()=>{this.handleHostPerm(record)}}>
+              <Icon type="desktop"/>主机权限
             </a>
           }
           <Divider type="vertical" />
@@ -218,10 +260,12 @@ class RolePage extends React.Component {
   ];
   
   render() {
-    const {pagePermVisible, value, visible, editCacheData} = this.state;
+    const {pagePermVisible, appPermVisible, hostPermVisible,
+      value, visible, editCacheData} = this.state;
     const {userPermissionsList, roleVisible,
      allPermissionsList, rolesList, rolesCount,
     rolesLoading, form: { getFieldDecorator } } = this.props;
+
     const addrole = <Button type="primary" onClick={this.showRoleAddModal} >新增角色</Button>;
 
     const extra = <Row gutter={16}>
@@ -285,12 +329,29 @@ class RolePage extends React.Component {
         </Modal>
 
         {pagePermVisible && 
-          <PagePerm rid={this.state.rid} 
+          <PagePerm 
+            rid={this.state.rid} 
             allPerm={allPermissionsList} 
             rolePerm={userPermissionsList} 
             dispatch={this.props.dispatch}
             onCancel={this.switchPagePerm} 
             onOk={this.handlePermissionOk}
+          />
+        }
+
+        {appPermVisible &&
+          <AppPerm
+            rid={this.state.rid} 
+            dispatch={this.props.dispatch}
+            onCancel={this.switchAppPerm} 
+          />
+        }
+
+        {hostPermVisible &&
+          <HostPerm
+            rid={this.state.rid} 
+            dispatch={this.props.dispatch}
+            onCancel={this.switchHostPerm} 
           />
         }
 

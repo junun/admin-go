@@ -105,7 +105,7 @@ class SubMenuPage extends React.Component {
 
   //显示编辑界面
   handleEdit = (values) => {
-    values.title =  '编辑菜单-' + values.name;
+    values.title =  '编辑菜单-' + values.Name;
     this.setState({ 
       visible: true ,
       editCacheData: values

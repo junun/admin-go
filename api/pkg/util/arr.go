@@ -1,5 +1,9 @@
 package util
 
+import (
+	"fmt"
+	"strings"
+)
 
 func StringInSlice(a string, list []string) bool {
 	for _, b := range list {
@@ -21,4 +25,21 @@ func RemoveDuplicateElement(addrs []string) []string {
 		}
 	}
 	return result
+}
+
+func StrArrContains(slice []string, item string) bool {
+	set := make(map[string]struct{}, len(slice))
+	for _, s := range slice {
+		set[s] = struct{}{}
+	}
+
+	_, ok := set[item]
+	return ok
+}
+
+
+func IntArrToString(arr []int, delim string) string {
+	return strings.Trim(strings.Replace(fmt.Sprint(arr), " ", delim, -1), "[]")
+	//return strings.Trim(strings.Join(strings.Split(fmt.Sprint(arr), " "), delim), "[]")
+	//return strings.Trim(strings.Join(strings.Fields(fmt.Sprint(arr)), delim), "[]")
 }

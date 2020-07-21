@@ -318,7 +318,9 @@ func GetJobInfo(c *gin.Context)  {
 
 	// 任务的最近一次所有主机历史信息
 	if mytype == 1 {
-		sql := "select * from task_history where id in (select SUBSTRING_INDEX(group_concat(id order by id desc),',',1) from task_history where task_id=? group by host_id);"
+		//sql := "select * from task_history where id in (select SUBSTRING_INDEX(group_concat(id order by id desc),',',1) from task_history where task_id=? group by host_id);"
+
+		sql := "select a.* from task_history a join (select max(id) AS id from task_history where task_id=? group by task_id, host_id) b on a.id=b.id;"
 
 		models.DB.Raw(sql, id).Scan(&taskhis)
 	}
@@ -356,8 +358,6 @@ func GetJobInfo(c *gin.Context)  {
 
 	util.JsonRespond(200, "", data, c)
 }
-
-
 
 // @Tags 任务计划
 // @Description 激活/禁用任务
@@ -641,7 +641,7 @@ func AddNewJob(mytype, id, isMore int, hostidstr, name, spec, cmd string)  {
 
 			status 	:= 0
 			startTime 	:= time.Now()
-			res , e := util.ExecuteCmd(cmd, Scli)
+			res , e := util.ExecuteCmdRemote(cmd, Scli)
 			if e != nil {
 				status = 1
 			}

@@ -20,7 +20,11 @@ export async function deployDel(params) {
 }
 
 export async function deployReview(params) {
-  return httpPut(`/admin/deploy/app/${params.ID}/review/${params.status}`, params);
+  return httpPut(`/admin/deploy/app/${params.id}/review`, params);
+}
+
+export async function getGitTag(params) {
+  return httpGet(`/admin/deploy/app/${params}/tag`);
 }
 
 export async function getGitBranch(params) {
@@ -30,3 +34,10 @@ export async function getGitBranch(params) {
 export async function getGitCommit(params) {
   return httpGet(`/admin/deploy/app/${params.aid}/commit/${params.name}`);
 }
+
+export async function rollbackConfirm(params) {
+  return httpPut(`/admin/undo/confirm/${params.id}`, params);
+}
+// export async function getAppVersion(params) {
+//   return httpGet(`/admin/deploy/app/${params}/version`);
+// }

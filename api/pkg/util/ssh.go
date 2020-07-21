@@ -1,8 +1,12 @@
 package util
 
 import (
+	"api/models"
+	"api/pkg/logging"
 	"bufio"
 	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/sftp"
@@ -95,22 +99,7 @@ func SSHDialTimeoutClient(network, addr string, config *ssh.ClientConfig, timeou
 }
 
 func ReturnClientConfig(username string, password string) (*ssh.ClientConfig, error) {
-	dir, _ 	:= os.Getwd()
-	path 	:= dir + "/" + GetIdRsaPath()
-
-	key, err := ioutil.ReadFile(path + "id_rsa")
-	if err != nil {
-		log.Fatalf("unable to read private key: %v", err)
-	}
-
-	// Create the Signer for this private key.
-	signer, err := ssh.ParsePrivateKey(key)
-	if err != nil {
-		log.Fatalf("unable to parse private key: %v", err)
-		return  nil, err
-	}
-
-	var  clientConfig *ssh.ClientConfig
+	var clientConfig *ssh.ClientConfig
 	if password != "" {
 		clientConfig = &ssh.ClientConfig{
 			User:    username,
@@ -123,9 +112,22 @@ func ReturnClientConfig(username string, password string) (*ssh.ClientConfig, er
 			Timeout: 10 * time.Second,  //Timeout is the maximum amount of time for the TCP connection to establish.
 		}
 	} else {
+		// 获取私钥
+		var set models.Settings
+		models.DB.Model(&models.Settings{}).
+			Where("name = ? ", "private_key").
+			Find(&set)
+
+		// Create the Signer for this private key.
+		signer, err := ssh.ParsePrivateKey([]byte(set.Value))
+		if err != nil {
+			logging.Error("unable to parse private key: %v", err)
+			return  nil, err
+		}
+
 		clientConfig = &ssh.ClientConfig{
-			User:    username,
-			Auth: []ssh.AuthMethod{
+			User: 	username,
+			Auth: 	[]ssh.AuthMethod{
 				ssh.PublicKeys(signer),
 			},
 			HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
@@ -134,7 +136,6 @@ func ReturnClientConfig(username string, password string) (*ssh.ClientConfig, er
 			Timeout: 10 * time.Second,  //Timeout is the maximum amount of time for the TCP connection to establish.
 		}
 	}
-
 
 	return clientConfig, nil
 }
@@ -162,24 +163,6 @@ func GetSftpClient(sshClient *ssh.Client) (*sftp.Client, error) {
 	}
 
 	return SftpClient, nil
-}
-
-func ExecuteCmd(cmd string, cli *ssh.Client) (string, error) {
-	session, _ := cli.NewSession()
-
-	defer session.Close()
-
-	command := "set -e\n" + cmd
-
-	var stdoutBuf bytes.Buffer
-	session.Stdout = &stdoutBuf
-
-	e 	:= session.Run(command)
-	if e != nil {
-		return stdoutBuf.String(), e
-	}
-
-	return stdoutBuf.String(), nil
 }
 
 func executeRuntimeCmd(cmd, hostname string, cli *ssh.Client) {
@@ -217,26 +200,27 @@ func executeRuntimeCmd(cmd, hostname string, cli *ssh.Client) {
 
 
 func PutFile(sftpClient *sftp.Client, localFilePath string, remotePath string) error {
-	srcFile, err := os.Open(localFilePath)
-	if err != nil {
-		return err
+	srcFile, e := os.Open(localFilePath)
+	if e != nil {
+		return e
 	}
 	defer srcFile.Close()
 
 	var remoteFileName = path.Base(localFilePath)
-	dstFile, err := sftpClient.Create(path.Join(remotePath, remoteFileName))
-	if err != nil {
-		return err
+	dstFile, e := sftpClient.Create(path.Join(remotePath, remoteFileName))
+	if e != nil {
+		return e
 	}
-
 	defer dstFile.Close()
 
-	ff, err := ioutil.ReadAll(srcFile)
-	if err != nil {
-		return err
-
+	ff, e 	:= ioutil.ReadAll(srcFile)
+	if e != nil {
+		return e
 	}
-	dstFile.Write(ff)
+	_, e	= dstFile.Write(ff)
+	if e != nil {
+		return e
+	}
 
 	return nil
 }
@@ -272,43 +256,63 @@ func split(r rune) bool {
 
 func ValidHosh(addres string, port int, username string, password string)  bool {
 	clientConfig, _ := ReturnClientConfig(username, password)
-	hostIp := addres + ":" + strconv.Itoa(port)
+	hostIp 			:= addres + ":" + strconv.Itoa(port)
 
-	Scli, err := GetSshClient(hostIp, clientConfig)
+	Scli, e := GetSshClient(hostIp, clientConfig)
 	//Scli, err := SSHDialTimeoutClient("tcp", hostIp, clientConfig, 3 * time.Second)
 
-	if err != nil {
-		log.Fatalf("connect host err: %v", err)
+	if e != nil {
+		logging.Error("connect host err: %v", e)
 		return false
 	}
 	defer Scli.Close()
 
 	if password != "" {
-		dir, _ := os.Getwd()
-		path := dir + "/" + GetIdRsaPath()
+		keystr 	:= ""
+		// 获取公钥
+		var set models.Settings
+		models.DB.Model(&models.Settings{}).
+			Where("name = ? ", "public_key").
+			Find(&set)
 
-		publickey, err := LoadPublicKeyFileToAuthorizedFormat(path + "id_rsa_pub")
+		if set.ID == 0 {
+			key, e := rsa.GenerateKey(rand.Reader, 2048)
+			if e != nil {
+				logging.Error("Private key cannot be created.", e.Error())
+				return false
+			}
+			pubkey := &key.PublicKey
+			privateKey, _ 	:= DumpPrivateKeyBuffer(key)
+			publicKey,  _ 	:= DumpPublicKeyBuffer(pubkey)
 
-		if err != nil {
-			fmt.Printf("Cannot load public key\n");
-			GenerateKey()
+			setPrivateKey 	:= models.Settings{Name: "private_key", Value: privateKey, Desc: "私钥"}
+			setPublicKey 	:= models.Settings{Name: "public_key", Value: publicKey, Desc: "公钥"}
+			if e:= models.DB.Create(&setPrivateKey).Error; e!=nil{
+				return false
+			}
+			if e:=  models.DB.Create(&setPublicKey).Error; e!=nil{
+				return false
+			}
+
+			keystr = publicKey
+		} else  {
+			keystr = set.Value
 		}
-
-		publickey, _ = LoadPublicKeyFileToAuthorizedFormat(path + "id_rsa_pub")
 
 		command := "mkdir -p -m 700 ~/.ssh " +
 			"&& echo '%v' >> ~/.ssh/authorized_keys " +
 			"&& chmod 600 ~/.ssh/authorized_keys"
 
-		_, err 	= ExecuteCmd(fmt.Sprintf(command, publickey), Scli)
-		if err != nil {
-			fmt.Printf("add public key error: %v", err)
+		keystr, _ = LoadPublicKeyToAuthorizedFormat(keystr)
+		_, e := ExecuteCmdRemote(fmt.Sprintf(command, keystr), Scli)
+		if e != nil {
+			logging.Error("add public key error: %v", e)
 			return false
 		}
 	} else {
-		_, err 	= ExecuteCmd("ping -c 127.0.0.1", Scli)
-		if err != nil {
-			fmt.Printf("auth fail : %v", err)
+		_, e := ExecuteCmdRemote("ping -c 1 127.0.0.1", Scli)
+		if e != nil {
+			logging.Error("auth fail : %v", e)
 			return false
 		}
 	}
@@ -451,4 +455,21 @@ func ExecCmdBySshToWs(cmd string, cli *ssh.Client, ws *websocket.Conn)  {
 	} else {
 		WsWriteMessage("执行成功！", ws)
 	}
+}
+
+func ExecuteCmdRemote(cmd string, cli *ssh.Client) (string, error) {
+	session, _ := cli.NewSession()
+	defer session.Close()
+
+	command := "set -e\n" + cmd
+
+	var stdoutBuf bytes.Buffer
+	session.Stdout = &stdoutBuf
+	session.Stderr = &stdoutBuf
+
+	e 	:= session.Run(command)
+	if e != nil {
+		return stdoutBuf.String(), e
+	}
+	return stdoutBuf.String(), nil
 }

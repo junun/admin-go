@@ -1,9 +1,10 @@
 
 import React, {Fragment, Component} from "react";
 import {Form, Card, Input, Table, Divider, Modal,
- Select, Row, Col, Button, Popconfirm, Icon, 
+ Select, Row, Col, Button, Popconfirm, Icon, PageHeader, 
  message} from "antd";
 import {hasPermission} from "@/utils/globalTools"
+import history from '@/utils/history';
 import {connect} from "dva";
 
 const FormItem = Form.Item;
@@ -62,6 +63,7 @@ class AppValuePage extends React.Component {
   handleCancel = () => {
     this.setState({
       visible: false,
+      editCacheData: {},
     });
   };
 
@@ -169,12 +171,15 @@ class AppValuePage extends React.Component {
     const {visible, aid, editCacheData} = this.state;
     const {projectsList, appValueList, appValueLen, appValueLoading, form: { getFieldDecorator } } = this.props;
     const addAppValue = <Button type="primary" onClick={this.showTypeAddModal} >新增变量</Button>;
-
     const extra = <Row gutter={16}>
           {hasPermission('app-value-add') && <Col span={10}>{addAppValue}</Col>}
       </Row>;
     return (
       <div>
+        <PageHeader 
+          title="初始化变量"
+          onBack={() => history.goBack()}
+        />
         <Modal
           title= { editCacheData.title || "新增变量" }
           visible= {visible}
@@ -196,7 +201,9 @@ class AppValuePage extends React.Component {
                 initialValue: editCacheData.Value || '',
                 rules: [{ required: true }],
               })(
-                <Input />
+                <Input.TextArea 
+                  rows={4}
+                />
               )}
             </FormItem>
             <FormItem label="备注信息">

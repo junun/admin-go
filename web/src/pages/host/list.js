@@ -3,6 +3,7 @@ import {Form, Card, Input, Table, Divider, Modal,
  Select, Row, Col, Button, Popconfirm, Icon, InputNumber,
  Switch, message} from "antd";
 import SearchForm from '@/components/SearchForm';
+import Import from './Import';
 import {connect} from "dva";
 import Link from 'umi/link';
 import {hasPermission} from "@/utils/globalTools"
@@ -29,6 +30,7 @@ const hostsZone = [
 class HostPage extends React.Component {
   state = {
     visible: false,
+    importVisible: false,
     editCacheData: {},
     Rid: 0,
     Name: '',
@@ -68,6 +70,7 @@ class HostPage extends React.Component {
   handleCancel = () => {
     this.setState({
       visible: false,
+      importVisible: false,
     });
   };
 
@@ -76,10 +79,12 @@ class HostPage extends React.Component {
     validateFields((err, values) => {
       if (!err) {
         const obj = this.state.editCacheData;
+        values.Enable = values.Enable && 1 || 0
         if (Object.keys(obj).length) {
           if (
             obj.Rid      === values.Rid && 
             obj.ZoneId   === values.ZoneId && 
+            obj.Enable   === values.Enable && 
             obj.Name     === values.Name && 
             obj.Username === values.Username && 
             obj.Addres   === values.Addres && 
@@ -90,15 +95,16 @@ class HostPage extends React.Component {
             message.warning('没有内容修改， 请检查。');
             return false;
           } else {
-            values.id = obj.id;
+            values.id = obj.id
+            values.Port = parseInt(values.Port)
             dispatch({
               type: 'host/hostEdit',
               payload: values,
             });
-            
           }
         } else {
-          values.Status = 1;
+          values.Status = 1
+          values.Port = parseInt(values.Port)
           dispatch({
             type: 'host/hostAdd',
             payload: values,
@@ -178,6 +184,7 @@ class HostPage extends React.Component {
   handleConsole = (info) => {
     window.open(`/admin/host/ssh/${info.id}?x-token=${sessionStorage.getItem('jwt')}`)
   };
+
 
   columns = [{
     title: '序号',
@@ -264,12 +271,15 @@ class HostPage extends React.Component {
   }];
   
   render() {
-    const {visible, editCacheData, Rid, Name} = this.state;
+    const {visible, importVisible, editCacheData, Rid, Name} = this.state;
     const {configEnvList, hostRoleList, hostList, hostLen, 
       hostLoading, form: { getFieldDecorator } } = this.props;
     const addHost = <Button type="primary" onClick={this.showHostAddModal} >新增主机</Button>;
+    const improtHosts = <Button style={{marginLeft: 20}} type="primary" icon="import"
+                onClick={() => this.setState({importVisible: true})}>批量导入</Button>
     const extra = <Row gutter={16}>
         {hasPermission('host-add') && <Col span={10}>{addHost}</Col>}
+        {hasPermission('host-import') && <Col span={10}>{improtHosts}</Col>}
       </Row>;
 
     return (
@@ -294,6 +304,7 @@ class HostPage extends React.Component {
             <Button type="primary" icon="sync" onClick={this.fetchRecords}>搜索</Button>
           </SearchForm.Item>
         </SearchForm>
+        
         <Modal
           width={800}
           maskClosable={false}
@@ -303,7 +314,7 @@ class HostPage extends React.Component {
           onOk={this.handleOk}
           onCancel={this.handleCancel}
         >
-          <Form>
+          <Form labelCol={{span: 6}} wrapperCol={{span: 14}}>
             <FormItem label="主机类型">
               {getFieldDecorator('Rid', {
                 initialValue: editCacheData.Rid || 'Please select' ,
@@ -319,7 +330,7 @@ class HostPage extends React.Component {
                 </Select>
               )}
             </FormItem>
-            <FormItem label="选择主机区域">
+            <FormItem label="主机区域">
                {getFieldDecorator('ZoneId', {
                 initialValue: editCacheData.ZoneId || 'Please select' ,
                 rules: [{ required: true }],
@@ -331,7 +342,7 @@ class HostPage extends React.Component {
                 </Select>
               )}
             </FormItem>
-            <FormItem label="环境">
+            <FormItem label="主机环境">
                {getFieldDecorator('EnvId', {
                 initialValue: editCacheData.EnvId || 'Please select' ,
                 rules: [{ required: true }],
@@ -353,31 +364,33 @@ class HostPage extends React.Component {
                 <Input />
               )}
             </FormItem>
-            <FormItem label="连接地址">
-              {getFieldDecorator('Addres', {
-                initialValue: editCacheData.Addres || '',
-                rules: [{ required: true }],
-              })(
-                <Input />
-              )}
-            </FormItem>
-            <FormItem label="端口">
-              {getFieldDecorator('Port', {
-                initialValue: editCacheData.Port || '',
-                rules: [{ required: true }],
-              })(
-                <InputNumber/>
-              )}
-            </FormItem>
-            <FormItem label="用户名">
-              {getFieldDecorator('Username', {
-                initialValue: editCacheData.Username || '',
-                rules: [{ required: true }],
-              })(
-                <Input />
-              )}
-            </FormItem>
-            <FormItem label="是否显示在跳板机">
+            <Form.Item required label="连接地址" style={{marginBottom: 0}}>
+              <FormItem style={{display: 'inline-block', width: 'calc(30%)'}}>
+                {getFieldDecorator('Username', {
+                  initialValue: editCacheData.Username || '',
+                  rules: [{ required: true }],
+                })(
+                  <Input addonBefore="ssh" placeholder="用户名"/>
+                )}
+              </FormItem>
+              <FormItem style={{display: 'inline-block', width: 'calc(40%)'}}>
+                {getFieldDecorator('Addres', {
+                  initialValue: editCacheData.Addres || '',
+                  rules: [{ required: true }],
+                })(
+                  <Input addonBefore="@" placeholder="主机名/IP"/>
+                )}
+              </FormItem>
+              <FormItem style={{display: 'inline-block', width: 'calc(30%)'}}>
+                {getFieldDecorator('Port', {
+                  initialValue: editCacheData.Port || '',
+                  rules: [{ required: true }],
+                })(
+                  <Input addonBefore="-p" placeholder="端口"/>
+                )}
+              </FormItem>
+            </Form.Item>
+            <FormItem label="跳板机接管">
               {getFieldDecorator('Enable', {
                 initialValue: editCacheData.Enable || false,
                 rules: [{ required: true }],
@@ -410,6 +423,13 @@ class HostPage extends React.Component {
             }
           </Form> 
         </Modal>
+
+        { importVisible && 
+          <Import 
+            onCancel={this.handleCancel}
+            dispatch={this.props.dispatch}
+          />
+        }
 
         <Card title="" extra={extra}>
           <Table  

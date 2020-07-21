@@ -55,16 +55,6 @@ class PagePerm extends React.Component {
     });
   };
 
-  // handleSubmit = () => {
-  //   this.setState({loading: true});
-  //   http.patch('/api/account/role/', {id: store.record.id, page_perms: store.permissions})
-  //     .then(res => {
-  //       message.success('操作成功');
-  //       store.pagePermVisible = false;
-  //       store.fetchRecords()
-  //     }, () => this.setState({loading: false}))
-  // };
-
   handleAllCheck = (e, mod, page) => {
     const checked = e.target.checked;
     var tmp = this.state.objPerm;
@@ -106,8 +96,9 @@ class PagePerm extends React.Component {
         temp: tmp,
       });
     } else {
+      tmp.push(id)
       this.setState({
-        temp: tmp.push(id),
+        temp: tmp,
         checkedValue: true,
       });
     }
@@ -116,7 +107,6 @@ class PagePerm extends React.Component {
   handlePermissionOk = () => {
     // const keys = this.state.checkedKeys;
     const keys = this.state.temp;
-    console.log(keys)
     if (keys.length > 0) {
       const values = {};
       values.id = this.props.rid;
@@ -177,7 +167,7 @@ class PagePerm extends React.Component {
                     { page.children && page.children.length && page.children.map(perm => (
                       <Col key={perm.id} span={8}>
                         <Checkbox 
-                          checked={this.state.temp.indexOf(perm.id) > -1 && true || false }
+                          checked={this.state.temp.includes(perm.id)}
                           onChange={() => this.handlePermCheck(perm.id)}
                         >
                           {perm.Name} 

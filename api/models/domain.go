@@ -6,21 +6,9 @@ type DomainInfo struct {
 	Model
 	Name      		string
 	Status			int
-	StartTime       time.Time
-	EndTime 		time.Time
-	Channel			string
+	IsCert			int
+	CertName 		string
+	DomainEndTime 	time.Time
+	CertEndTime 	time.Time
 	Desc  			string
 }
-
-
-type CertificateInfo struct {
-	Model
-	Did				int
-	Name      		string
-	Status			int
-	StartTime       time.Time
-	EndTime 		time.Time
-	Channel			string
-	Desc  			string
-}
-

@@ -73,11 +73,12 @@ function compareArray(a1, a2) {
 // 前端页面的权限判断(仅作为前端功能展示的控制，具体权限控制应在后端实现)
 function hasPermission(strCode) {
   if (sessionStorage.getItem('is_supper')) return true;
-  
+
   let permissions = sessionStorage.getItem('permissions');
   if (!strCode || !permissions) return false;
   permissions = permissions.split(',');
-  for (let or_item of strCode.split('-')) {
+
+  for (let or_item of strCode.split('|')) {
     if (isSubArray(permissions, or_item.split('&'))) {
       return true
     }

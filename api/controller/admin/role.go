@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"strconv"
+	"strings"
 )
 
 type RoleResource struct {
@@ -16,6 +17,14 @@ type RoleResource struct {
 
 type RolePermResource struct {
 	Codes       []int 		`json:Codes`
+}
+
+type RoleAppResource struct {
+	Apps       map[int][]int `json:Apps`
+}
+
+type RoleHostResource struct {
+	Hosts       map[int][]int `json:Hosts`
 }
 
 var  menu_redis_set_key string
@@ -130,7 +139,7 @@ func PutRole(c *gin.Context)  {
 
 	e := models.DB.Save(&role).Error
 	if e != nil {
-		util.JsonRespond(500, "内部错误", "", c)
+		util.JsonRespond(500, e.Error(), "", c)
 		return
 	}
 
@@ -188,8 +197,8 @@ func GetRolePerms(c *gin.Context) {
 }
 
 // @Tags 角色管理
-// @Description 添加/修改角色权限
-// @Summary  添加/修改角色权限
+// @Description 添加/修改角色功能权限
+// @Summary  添加/修改角色功能权限
 // @Produce  json
 // @Param Authorization header string true "token"
 // @Param id path int true "ID"
@@ -280,4 +289,189 @@ func PostRolePerms(c *gin.Context)  {
 	models.SetRolePermToSet(key, rid)
 
 	util.JsonRespond(200, "","", c)
+}
+
+// @Tags 角色管理
+// @Description 角色发布权限
+// @Summary  角色发布权限
+// @Produce  json
+// @Param Authorization header string true "token"
+// @Param id path int true "ID"
+// @Success 200 {string} string "{"code": 200, "message": "", "data": {}}"
+// @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
+// @Router /admin/roles/{id}/app [get]
+func GetRoleApp(c *gin.Context) {
+	var app []models.RoleEnvApp
+	data := make(map[int]interface{})
+
+	models.DB.Model(&models.RoleEnvApp{}).
+		Where("rid = ?", c.Param("id")).
+		Find(&app)
+	if len(app) > 0 {
+		for _, v := range app {
+			ids := []int{}
+			for _, v1 := range strings.Split(v.AppIds, ",") {
+				if v1 == "" {
+					break
+				}
+				i, e := strconv.Atoi(v1)
+				if e != nil {
+					util.JsonRespond(500, e.Error(), "", c)
+					return
+				}
+				ids 	= append(ids, i)
+			}
+			data[v.Eid] = ids
+		}
+	}
+
+	util.JsonRespond(200, "", data, c)
+}
+
+// @Tags 角色管理
+// @Description 添加/修改角色发布权限
+// @Summary  添加/修改角色发布权限
+// @Produce  json
+// @Param Authorization header string true "token"
+// @Param id path int true "ID"
+// @Param Data body admin.RolePermResource true "角色权限信息"
+// @Success 200 {string} string "{"code": 200, "message": "", "data": {}}"
+// @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
+// @Router /admin/roles/{id}/app [post]
+func PostRoleApp(c *gin.Context)  {
+	if !middleware.PermissionCheckMiddleware(c,"role-perm-add") {
+		util.JsonRespond(403, "请求资源被拒绝", "", c)
+		return
+	}
+
+	var data  RoleAppResource
+	rid,_ 		:= strconv.Atoi(c.Param("id"))
+
+	e 	:= c.BindJSON(&data)
+	if e != nil {
+		util.JsonRespond(500, e.Error(), "", c)
+		return
+	}
+
+	for k, v := range data.Apps {
+		var app models.RoleEnvApp
+		strv :=  util.IntArrToString(v, ",")
+		models.DB.Model(&models.RoleEnvApp{}).
+			Where("rid = ?", rid).
+			Where("eid = ?", k).
+			Find(&app)
+
+		if app.ID > 0 {
+			app.AppIds = strv
+			e := models.DB.Save(&app).Error
+			if e != nil {
+				util.JsonRespond(500, e.Error(), "", c)
+				return
+			}
+			continue
+		}
+
+		app.Eid 	= k
+		app.Rid 	= rid
+		app.AppIds 	= strv
+		e := models.DB.Save(&app).Error
+		if e != nil {
+			util.JsonRespond(500, e.Error(), "", c)
+			return
+		}
+	}
+
+	util.JsonRespond(200, "操作成功","", c)
+}
+
+// @Tags 角色管理
+// @Description 角色主机权限
+// @Summary  角色主机权限
+// @Produce  json
+// @Param Authorization header string true "token"
+// @Param id path int true "ID"
+// @Success 200 {string} string "{"code": 200, "message": "", "data": {}}"
+// @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
+// @Router /admin/roles/{id}/host [get]
+func GetRoleHost(c *gin.Context) {
+	var host []models.RoleEnvHost
+	data := make(map[int]interface{})
+
+	models.DB.Model(&models.RoleEnvHost{}).
+		Where("rid = ?", c.Param("id")).
+		Find(&host)
+	if len(host) > 0 {
+		for _, v := range host {
+			ids := []int{}
+			for _, v1 := range strings.Split(v.HostIds, ",") {
+				if v1 == "" {
+					break
+				}
+				i, e := strconv.Atoi(v1)
+				if e != nil {
+					util.JsonRespond(500, e.Error(), "", c)
+					return
+				}
+				ids 	= append(ids, i)
+			}
+			data[v.Eid] = ids
+		}
+	}
+
+	util.JsonRespond(200, "", data, c)
+}
+
+// @Tags 角色管理
+// @Description 添加/修改角色主机权限
+// @Summary  添加/修改角色主机权限
+// @Produce  json
+// @Param Authorization header string true "token"
+// @Param id path int true "ID"
+// @Param Data body admin.RolePermResource true "角色权限信息"
+// @Success 200 {string} string "{"code": 200, "message": "", "data": {}}"
+// @Failure 500 {string} string {"code": 500, "message": "", "data": {}}
+// @Router /admin/roles/{id}/host [post]
+func PostRoleHost(c *gin.Context)  {
+	if !middleware.PermissionCheckMiddleware(c,"role-perm-add") {
+		util.JsonRespond(403, "请求资源被拒绝", "", c)
+		return
+	}
+
+	var data  RoleHostResource
+	rid,_ 	:= strconv.Atoi(c.Param("id"))
+	e 	:= c.BindJSON(&data)
+	if e != nil {
+		util.JsonRespond(500, e.Error(), "", c)
+		return
+	}
+
+	for k, v := range data.Hosts {
+		var host models.RoleEnvHost
+		strv :=  util.IntArrToString(v, ",")
+		models.DB.Model(&models.RoleEnvHost{}).
+			Where("rid = ?", rid).
+			Where("eid = ?", k).
+			Find(&host)
+
+		if host.ID > 0 {
+			host.HostIds = strv
+			e := models.DB.Save(&host).Error
+			if e != nil {
+				util.JsonRespond(500, e.Error(), "", c)
+				return
+			}
+			continue
+		}
+
+		host.Eid 		= k
+		host.Rid 		= rid
+		host.HostIds 	= strv
+		e := models.DB.Save(&host).Error
+		if e != nil {
+			util.JsonRespond(500, e.Error(), "", c)
+			return
+		}
+	}
+
+	util.JsonRespond(200, "操作成功","", c)
 }

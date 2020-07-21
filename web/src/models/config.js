@@ -6,6 +6,7 @@ import {getConfigEnv, configEnvAdd, configEnvEdit, configEnvDel, getProject,
 import router from 'umi/router';
 import { message } from 'antd';
 
+
 export default {
   namespace: 'config',
 
@@ -368,6 +369,7 @@ export default {
     *deployExtendAdd({ payload }, { call, put }) {
       const response = yield call(deployExtendAdd, payload);
       if (response && response.code == 200) {
+        message.success(response.message);
         window.location.reload();
       } else {
         message.error(response.message);
@@ -377,6 +379,7 @@ export default {
       console.log(payload);
       const response = yield call(deployExtendEdit, payload);
       if (response && response.code == 200) {
+        message.success(response.message);
         window.location.reload();
       } else {
         message.error(response.message);

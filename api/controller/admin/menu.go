@@ -154,6 +154,14 @@ func DeleteMenus(c *gin.Context)  {
 		return
 	}
 
+	// 检查菜单是否被权限项关联
+	var res []models.MenuPermissions
+	models.DB.Model(&models.MenuPermissions{}).Where("pid = ?", c.Param("id")).Find(&res)
+	if len(res) > 0 {
+		util.JsonRespond(500, "该菜单目前被二级菜单或者权限项依赖，无法删除！", "", c)
+		return
+	}
+
 	e := models.DB.Delete(models.MenuPermissions{}, "id = ?", c.Param("id")).Error
 	if e != nil {
 		util.JsonRespond(500, e.Error(), "", c)

@@ -1,8 +1,6 @@
 package models
 
-import (
-	"log"
-)
+import "api/pkg/logging"
 
 const (
 	// redis 角色菜单 key 前缀
@@ -26,6 +24,11 @@ const (
 	// Cron Jobs 运行时候需要限制单实例运行的情况，用于标识正在运行任务的Hash key
 	CronJobOnRunKey 	= "cron_job_on_run_key"
 
+	// Deploy info to redis key index
+	DeployInfoKey 		= "deploy_info_index_"
+
+	// WebChat AccessToken  key
+	WebChatAccessToken	= "web_chat_access_token_"
 )
 
 // 角色
@@ -70,25 +73,18 @@ type RolePermissionRel struct {
 	Pid				int
 }
 
-type History struct {
+type RoleEnvApp struct {
 	Model
-	Title     string
-	Year      int
-	Month     int
-	Day       int
-	ImageUrl  string
-	Desc  	  string
+	Rid				int
+	Eid				int
+	AppIds			string
 }
 
-type Banner struct {
+type RoleEnvHost struct {
 	Model
-	Bid       	int
-	Title     	string
-	ImageUrl  	string
-	Icon		string
-	Status		int
-	CreateTime	int64
-	UpdateTime 	int64
+	Rid				int
+	Eid				int
+	HostIds			string
 }
 
 func (u *User) ReturnPermissions() []string {
@@ -127,9 +123,8 @@ func SetRolePermToSet(key string, rid int) {
 
 	for _, v := range mps {
 		e := SetValBySetKey(key, v.Permission)
-
 		if e != nil {
-			log.Fatal(e)
+			logging.Error(e)
 		}
 	}
 }

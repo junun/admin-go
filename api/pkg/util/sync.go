@@ -10,9 +10,9 @@ func GetSyncPath() string {
 	return setting.AppSetting.SyncPath
 }
 
-func ReturnSyncRunDir(env string, appId int) string {
+func ReturnSyncRunDir(appId int) string {
 	dir, _ 		:= os.Getwd()
-	path 		:= dir + "/" + GetSyncPath() + env + "/" + strconv.Itoa(appId)
+	path 		:= dir + "/" + GetSyncPath()  + "/" + strconv.Itoa(appId)
 	_, err 		:= os.Stat(path)
 	if os.IsNotExist(err) {
 		err := os.MkdirAll(path, os.ModePerm)

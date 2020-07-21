@@ -18,8 +18,12 @@ export async function userLogout() {
   return httpPost('/admin/user/logout');
 }
 
-export async function getMenu() {
-  return httpGet('/api/v1/permission');
+export async function getSetting() {
+  return httpGet('/admin/system');
+}
+
+export async function getSettingAbout() {
+  return httpGet('/admin/system/about');
 }
 
 export async function getMenus(params) {
@@ -78,9 +82,7 @@ export async function getAllPermissions() {
 }
 
 export async function getRolePerms(params) {
-  // return httpGet(`/api/v1/user/vpns?${stringify(params)}`);
   return httpGet(`/admin/roles/${params}/permissions`);
-
 }
 
 export async function rolePermsAdd(params) {
@@ -88,4 +90,62 @@ export async function rolePermsAdd(params) {
   delete params.id
   return httpPost(`/admin/roles/${id}/permissions`, params);
 }
+
+export async function roleAppAdd(params) {
+  var id = params.id
+  delete params.id
+  return httpPost(`/admin/roles/${id}/app`, params);
+}
+
+export async function roleHostAdd(params) {
+  var id = params.id
+  delete params.id
+  return httpPost(`/admin/roles/${id}/host`, params);
+}
+
+export async function getAllEnvApp() {
+  return httpGet('/admin/env/app');
+}
+
+export async function getAllEnvHost() {
+  return httpGet('/admin/env/host');
+}
+
+export async function getRoleEnvApp(params) {
+  return httpGet(`/admin/roles/${params}/app`);
+}
+
+export async function getRoleEnvHost(params) {
+  return httpGet(`/admin/roles/${params}/host`);
+}
+
+export async function getRobot(params) {
+  return httpGet(`/admin/system/robot?${stringify(params)}`);
+}
+
+export async function robotAdd(params) {
+  return httpPost('/admin/system/robot', params);
+}
+
+export async function robotEdit(params) {
+  return httpPut(`/admin/system/robot/${params.id}`, params);
+}
+
+export async function robotDel(params) {
+  return httpDel(`/admin/system/robot/${params}`);
+}
+
+export async function settingModify(params) {
+  return httpPost(`/admin/system`, params);
+}
+
+export async function settingMailTest(params) {
+  return httpPost(`/admin/system/mail`, params);
+}
+
+export async function robotTest(params) {
+  return httpPost(`/admin/system/robot/${params.id}`, params);
+}
+
+
 
