@@ -25,7 +25,7 @@ import (
 
 
 func main() {
-	// 主进程运行期间启动一个定时任务协程检查证书和域名是否到期
+	// 主进程运行期间启动一个定时任务协程
 	go func() {
 		//admin.CheckDomainAndCretCronTask()
 		admin.StartCronJobsOnBoot()

@@ -281,15 +281,18 @@ func ValidHosh(addres string, port int, username string, password string)  bool 
 				logging.Error("Private key cannot be created.", e.Error())
 				return false
 			}
-			pubkey := &key.PublicKey
+			pubkey 			:= &key.PublicKey
 			privateKey, _ 	:= DumpPrivateKeyBuffer(key)
 			publicKey,  _ 	:= DumpPublicKeyBuffer(pubkey)
+			publicKeyStr, _ := LoadPublicKeyToAuthorizedFormat(publicKey)
 
 			setPrivateKey 	:= models.Settings{Name: "private_key", Value: privateKey, Desc: "私钥"}
-			setPublicKey 	:= models.Settings{Name: "public_key", Value: publicKey, Desc: "公钥"}
+			setPublicKey 	:= models.Settings{Name: "public_key", Value: publicKeyStr, Desc: "公钥"}
+
 			if e:= models.DB.Create(&setPrivateKey).Error; e!=nil{
 				return false
 			}
+
 			if e:=  models.DB.Create(&setPublicKey).Error; e!=nil{
 				return false
 			}
@@ -303,7 +306,7 @@ func ValidHosh(addres string, port int, username string, password string)  bool 
 			"&& echo '%v' >> ~/.ssh/authorized_keys " +
 			"&& chmod 600 ~/.ssh/authorized_keys"
 
-		keystr, _ = LoadPublicKeyToAuthorizedFormat(keystr)
+		//keystr, _ = LoadPublicKeyToAuthorizedFormat(keystr)
 		_, e := ExecuteCmdRemote(fmt.Sprintf(command, keystr), Scli)
 		if e != nil {
 			logging.Error("add public key error: %v", e)
@@ -317,33 +320,6 @@ func ValidHosh(addres string, port int, username string, password string)  bool 
 		}
 	}
 
-
-
-	//dir, _ := os.Getwd()
-	//path := dir + "/" + GetIdRsaPath()
-	//cmd, err := ioutil.ReadFile(path + "test")
-	//
-	//m := strings.FieldsFunc(string(cmd), split)
-	//for _,c := range m {
-	//	if c != "" {
-	//		go fmt.Println(executeCmd(c, addres, Scli))
-	//	}
-	//}
-
-	//fmt.Println(executeCmd("ls -lah" ,addres, Scli))
-	//time.Sleep(1 * time.Second)
-	//
-	//var localFilePath 	= "/Users/angus/Documents/git/go_spug/api/runtime/upload/images"
-	//var remoteDir 		= "/tmp/"
-	//SftpClient,_ := GetSftpClient(Scli)
-	////PutFile(SftpClient,localFilePath, remoteDir)
-	//
-	//PutDirectory(SftpClient,localFilePath, remoteDir )
-
-	//fmt.Println("time now")
-	//fmt.Println(executeCmd(string(cmd),addres, Scli))
-	//fmt.Println(executeCmd("cat /proc/cpuinfo \n" +
-	//	"who",addres, Scli))
 	return true
 }
 

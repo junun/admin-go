@@ -439,12 +439,13 @@ class SchedulePage extends React.Component {
                     onChange={v => this.handCommand(v)}
                     height="150px"/>
               </FormItem>
-              <FormItem label="开启多实例支持">
+              <FormItem label="多实例支持">
                 {getFieldDecorator('IsMore', {
                   initialValue: editCacheData.IsMore && true || false,
+                  valuePropName: "checked",
                   rules: [{ required: false }],
                 })(
-                  <Switch defaultChecked={editCacheData.IsMore && true || false } />
+                  <Switch/>
                 )}
               </FormItem>
               <FormItem label="备注信息">

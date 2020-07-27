@@ -77,6 +77,13 @@ class UserLayout extends Component {
                   )}
                 </Form.Item>
                 <Form.Item>
+                  {getFieldDecorator('secret', {
+                    rules: [{ required: false, message: '请输入动态口令' }],
+                  })(
+                    <Input prefix={<Icon type="code" style={{ color: 'rgba(0,0,0,.25)' }} />} placeholder="动态口令" />
+                  )}
+                </Form.Item>
+                <Form.Item>
                   {getFieldDecorator('remember', {
                     valuePropName: 'checked',
                     initialValue: true,

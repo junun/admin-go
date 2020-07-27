@@ -1,6 +1,6 @@
 import React, {Fragment, Component} from "react";
 import {Form, Card, Input, Table, Divider, Modal, Select,
- Row, Col, Button, Popconfirm, Icon, message} from "antd";
+ Row, Col, Button, Popconfirm, Icon, Switch, message} from "antd";
 import {connect} from "dva";
 import {timeTrans, hasPermission} from "@/utils/globalTools"
 
@@ -48,11 +48,13 @@ class ListPage extends React.Component {
     validateFields((err, values) => {
       if (!err) {
         const obj = this.state.editCacheData;
+        values.TwoFactor   =  values.TwoFactor ? 1 : 0
         if (Object.keys(obj).length) {
           if (
             obj.Nickname   === values.Nickname && 
             obj.Mobile     === values.Mobile && 
             obj.Email      === values.Email && 
+            obj.TwoFactor  === values.TwoFactor && 
             obj.Rid        === values.Rid 
           ) {
             message.warning('没有内容修改， 请检查。');
@@ -63,8 +65,11 @@ class ListPage extends React.Component {
             dispatch({
               type: 'user/userEdit',
               payload: values,
-            });
-            
+            }).then(() => {
+              this.setState({ 
+                visible: false,
+              });
+            })
           }
         } else {
           if (values.password != values.repassword) {
@@ -74,13 +79,14 @@ class ListPage extends React.Component {
             dispatch({
               type: 'user/userAdd',
               payload: values,
-            });
+            }).then(() => {
+              this.setState({ 
+                visible: false,
+              });
+            })
           }
         }
         // 重置 `visible` 属性为 false 以关闭对话框
-        this.setState({ 
-          visible: false,
-        });
       }
     });
   };
@@ -221,13 +227,15 @@ class ListPage extends React.Component {
     return (
       <div>
         <Modal
+          width={800}
+          maskClosable={false}
           title= { editCacheData.title || "新建用户" }
           visible= {visible}
           destroyOnClose= "true"
           onOk={this.handleOk}
           onCancel={this.handleCancel}
         >
-          <Form>
+          <Form labelCol={{span: 6}} wrapperCol={{span: 14}}>
             <FormItem label="登录名">
               {getFieldDecorator('Name', {
                 initialValue: editCacheData.Name || '',
@@ -258,6 +266,16 @@ class ListPage extends React.Component {
                 rules: [{ required: true }],
               })(
                 <Input />
+              )}
+            </FormItem>
+            <FormItem label="双因子认证">
+              {getFieldDecorator('TwoFactor', {
+                // initialValue: editCacheData.TwoFactor && true || false,
+                initialValue: editCacheData.TwoFactor && true || false,
+                valuePropName: "checked",
+                rules: [{ required: false }],
+              })(
+                <Switch/>
               )}
             </FormItem>
             { !Object.keys(editCacheData).length  && 

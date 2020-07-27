@@ -1,6 +1,10 @@
 package util
 
 import (
+	"crypto/rand"
+	"encoding/base32"
+	"errors"
+	"fmt"
 	"strconv"
 )
 
@@ -145,4 +149,16 @@ func (s S) DefaultFloat32(defaultVal float32) float32 {
 // ToJSON 转换为JSON
 func (s S) ToJSON(v interface{}) error {
 	return json.Unmarshal(s.Bytes(), v)
+}
+
+//
+func RetunRandString() (string, error) {
+	key := make([]byte, 64)
+	total, err := rand.Read(key)
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("rand string failed to create because there is not enough entropy, we got only %d random bytes", total))
+	}
+
+
+	return base32.StdEncoding.EncodeToString(key)[0:16], nil
 }

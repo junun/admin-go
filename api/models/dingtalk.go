@@ -28,37 +28,6 @@ var (
 var DingList = []string{"1581xxxx723","1581xxxx724", "1581xxxx725"}
 const DingUser = "1581xxxx723"
 
-//func init() {
-//	// 获取 dingsecret 配置
-//	ds, err := setting.Cfg.GetSection("dingsecret")
-//	if err != nil {
-//		log.Fatal(2, "Fail to get section 'dingsecret': %v", err)
-//	}
-//
-//	SecretDing = ReturnSecretDingTalkClient(
-//		ds.Key("webhook").String(),
-//		ds.Key("secret").String())
-//
-//	// 获取 dingkeyword 配置
-//	dk, err := setting.Cfg.GetSection("dingkeyword")
-//	if err != nil {
-//		log.Fatal(2, "Fail to get section 'dingkeyword': %v", err)
-//	}
-//
-//	KeyWordDing = ReturnKeyWordDingTalkClient(
-//		dk.Key("webhook").String())
-//
-//
-//	// 获取 dingacl 配置
-//	da, err := setting.Cfg.GetSection("dingacl")
-//	if err != nil {
-//		log.Fatal(2, "Fail to get section 'dingacl': %v", err)
-//	}
-//
-//	AclDing = ReturnAclDingTalkClient(
-//		da.Key("webhook").String())
-//
-//}
 
 // Secret
 type SecretDingTalkClient struct {

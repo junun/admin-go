@@ -47,6 +47,8 @@ type User struct {
 	PasswordHash 	string `json:"-"`
 	Email			string
 	Mobile			string
+	Secret			string
+	TwoFactor	    int
 	IsSupper  		int
 	IsActive		int
 	AccessToken 	string

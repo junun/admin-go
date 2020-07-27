@@ -1,23 +1,44 @@
 package main
 
 import (
+	"api/pkg/util"
 	"fmt"
 	"github.com/robfig/cron/v3"
 	"runtime"
-	"strings"
 )
 
 func foo() {
 	fmt.Println(runtime.GOOS)
 }
 
+func TestQr()  {
+
+}
+
+
+
 func main() {
-	str := `{"title":"setup1","data|wc -l":"echo \"need reload\""}|{"title":"setup2","data":"ping -c 1 127.0.0.1\necho \"reloading\"\nw"}`
 
-	fmt.Println(strings.Split(str, "|"))
-	//models.DingtalkSentChannel(4, "测试企业微信应用", []string{"15818699723"}, false)
+	//otpconf := dgoogauth.OTPConfig{
+	//	Secret:       "2SH3V3GDW7ZNMGYE",
+	//	WindowSize:   3,
+	//	HotpCounter:  0,
+	//	ScratchCodes: []int{11112222, 22223333},
+	//}
+	//
+	//fmt.Println(otpconf.ProvisionURI("xxoo"))
 
-	//fmt.Println(models.ReturnWebChatAccessToken("ww418a1a1d690697ab", "zlQVK5rJM0LE3u95Zr4rhZjdDEGRVRJGNrzHDs-9H_4"))
+	fmt.Println(util.RetunRandString())
+
+
+	//otp, e := twofactor.NewTOTP("info@sec51.com", "Sec51", crypto.SHA1, 8)
+	//
+	//fmt.Println(e)
+	//
+	//
+	//tmp, _ := otp.ToBytes()
+	////fmt.Println(string(tmp))
+	//fmt.Println(base32.StdEncoding.EncodeToString(tmp))
 
 	//key, e := rsa.GenerateKey(rand.Reader, 2048)
 	//if e != nil {
@@ -32,12 +53,6 @@ func main() {
 	//str := "1_2_123"
 	//fmt.Println(strings.Join(strings.Split(str, "_")[0:2],"_"))
 
-	//fmt.Println(util.HumanNowTime())
-	//str := `{"version":"1.0.0","name":"\"sweet hony\"","port":"9090"}`
-	//data := make(map[string]string)
-	//json.Unmarshal([]byte(str), &data)
-	//fmt.Println(data)
-	//fmt.Println(util.ReturnGitTagByCommand(2, "ssh://git@git.zhien88.com:2222/zeyw/nginx"))
 
 	//var about models.About
 	//

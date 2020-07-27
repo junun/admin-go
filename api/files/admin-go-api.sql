@@ -473,7 +473,7 @@ CREATE TABLE `task_history` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `task_host_index` (`task_id`,`host_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=15747 DEFAULT CHARSET=utf8mb4 COMMENT='任务执行历史信息表';
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COMMENT='任务执行历史信息表';
 
 -- ----------------------------
 -- Table structure for user
@@ -487,13 +487,14 @@ CREATE TABLE `user` (
   `password_hash` varchar(100) NOT NULL DEFAULT '' COMMENT 'hash密码',
   `email` varchar(120) NOT NULL DEFAULT '' COMMENT '邮箱',
   `mobile` varchar(30) NOT NULL DEFAULT '' COMMENT '电话',
+  `secret` varchar(128) NOT NULL DEFAULT '' COMMENT '用户共享秘钥',
+  `two_factor` tinyint(1) NOT NULL COMMENT '是否启用双因子认证',
   `is_supper` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否为超级用户',
   `is_active` tinyint(1) NOT NULL DEFAULT '0' COMMENT '用户是否激活',
   `access_token` varchar(120) NOT NULL DEFAULT '' COMMENT '用户token',
   `token_expired` int(11) NOT NULL DEFAULT '0' COMMENT 'token过期时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8 COMMENT='用户表';
-
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COMMENT='用户表'
 
 SET FOREIGN_KEY_CHECKS = 1;

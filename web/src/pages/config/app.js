@@ -529,11 +529,13 @@ class ProjectListPage extends React.Component {
         <Modal
           title= { editCacheData.title || "新建项目" }
           visible= {visible}
+          width={800}
+          maskClosable={false}
           destroyOnClose= "true"
           onOk={this.handleOk}
           onCancel={this.handleCancel}
           style={{ top: 20 }} >
-          <Form>
+          <Form labelCol={{span: 6}} wrapperCol={{span: 14}}>
             <FormItem label="项目名">
               {getFieldDecorator('Name', {
                 initialValue: editCacheData.Name || '',
@@ -576,25 +578,28 @@ class ProjectListPage extends React.Component {
             <FormItem label="是否需要初始化">
               {getFieldDecorator('EnableSync', {
                 initialValue: editCacheData.EnableSync && true || false,
+                valuePropName: "checked",
                 rules: [{ required: true }],
               })(
-                <Switch defaultChecked={editCacheData.EnableSync || false} onChange={this.onCheckChange} />
+                <Switch onChange={this.onCheckChange} />
               )}
             </FormItem>
             <FormItem label="是否生效">
               {getFieldDecorator('Active', {
                 initialValue: editCacheData.Active && true || false,
+                valuePropName: "checked",
                 rules: [{ required: true }],
               })(
-                <Switch defaultChecked={editCacheData.Active || false} onChange={this.onCheckChange} />
+                <Switch onChange={this.onCheckChange} />
               )}
             </FormItem>
             <FormItem label="是否需要自定义发布">
               {getFieldDecorator('DeployType', {
                 initialValue: editCacheData.DeployType && true || false,
+                valuePropName: "checked",
                 rules: [{ required: true }],
               })(
-                <Switch defaultChecked={editCacheData.DeployType || false} onChange={this.onCheckChange} />
+                <Switch onChange={this.onCheckChange} />
               )}
             </FormItem>
             <FormItem label="备注信息">

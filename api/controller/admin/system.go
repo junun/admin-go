@@ -7,7 +7,6 @@ import (
 	"api/pkg/util"
 	"github.com/gin-gonic/gin"
 	"github.com/unknwon/com"
-	"gopkg.in/gomail.v2"
 	"runtime"
 	"strconv"
 	"strings"
@@ -128,7 +127,7 @@ func EmailTest(c *gin.Context)  {
 	}
 
 	port, _ := strconv.Atoi(data.Port)
-	gd	:= InitDialer(data.Server, data.Username, data.Password, port)
+	gd	:= models.InitDialer(data.Server, data.Username, data.Password, port)
 	msg := "This is a test email！"
 	m 	:= models.CreateMsg(data.Username, []string{data.Username}, msg, msg)
 	if e = gd.DialAndSend(m); e != nil {
@@ -145,7 +144,7 @@ func About(c *gin.Context)  {
 	about.Golangversion = runtime.Version()
 	about.SystemInfo 	= runtime.GOOS
 	about.GinVersion 	= gin.Version
-	data["lists"] = about
+	data["lists"] 		= about
 
 	util.JsonRespond(200, "", data, c)
 }
@@ -372,8 +371,5 @@ func RobotTest(c *gin.Context)  {
 	util.JsonRespond(200, "机器人通道正常", "", c)
 }
 
-// 自定义发送邮箱
-func InitDialer(host, user, pass string , port int) *gomail.Dialer {
-	return gomail.NewDialer(host, port, user, pass)
-}
+
 

@@ -3,18 +3,27 @@ package admin
 import (
 	"api/middleware"
 	"api/models"
+	"api/pkg/file"
 	"api/pkg/logging"
+	"api/pkg/upload"
 	"api/pkg/util"
+	"crypto"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/dgryski/dgoogauth"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/sec51/twofactor"
+	"github.com/skip2/go-qrcode"
+	"os"
 	"time"
 )
 
 type LoginResource struct {
 	Username    string    `form:"username"`
 	Password 	string    `form:"password"`
+	Secret		string	  `form:"secret"`
 }
 
 type UserResource struct {
@@ -25,6 +34,7 @@ type UserResource struct {
 	Rid 		int 		`form: Rid`
 	Password 	string    	`form:"password"`
 	IsActive	int 		`form:IsActive`
+	TwoFactor	int 		`form:TwoFactor`
 }
 
 // @Tags 用户管理
@@ -82,6 +92,31 @@ func Login(c *gin.Context)  {
 			util.JsonRespond(401, "用户名或密码错误，连续3次错误将会被禁用", "", c)
 			return
 		} else {
+			// 如果启用双因子认证
+			if user.TwoFactor == 1 {
+				if dataResource.Secret == "" {
+					util.JsonRespond(401, "动态口令不能为空！", "", c)
+					return
+				}
+
+				totoconf := dgoogauth.OTPConfig{
+					Secret: user.Secret,
+					WindowSize: 3,
+					HotpCounter:  0,
+					ScratchCodes: []int{},
+				}
+
+				isSecret, e := totoconf.Authenticate(dataResource.Secret)
+				if e != nil {
+					util.JsonRespond(401, e.Error(), "", c)
+					return
+				}
+
+				if !isSecret {
+					util.JsonRespond(401, e.Error(), "", c)
+					return
+				}
+			}
 			//生成token
 			token := uuid.New().String()
 			user.AccessToken = token
@@ -134,7 +169,7 @@ func Logout(c *gin.Context)  {
 
 	e := models.DB.Save(&user).Error
 	if e != nil {
-		util.JsonRespond(500, "内部错误", "", c)
+		util.JsonRespond(500, e.Error(), "", c)
 		return
 	}
 
@@ -215,7 +250,6 @@ func PostUser(c *gin.Context)  {
 	}
 
 	PasswordHash, err := util.HashPassword(data.Password)
-
 	if err != nil {
 		util.JsonRespond(500, "hash密码错误，请联系管理员！", "", c)
 		return
@@ -230,14 +264,130 @@ func PostUser(c *gin.Context)  {
 		PasswordHash: PasswordHash,
 		Rid: data.Rid}
 
-	e := models.DB.Save(&myuser).Error
+	// 检查是否启用双因子认证
+	if data.TwoFactor == 1 {
+		secret, e := util.RetunRandString()
+		if e != nil {
+			util.JsonRespond(500, e.Error(), "", c)
+			return
+		}
+		myuser.TwoFactor 	= data.TwoFactor
+		myuser.Secret 		= secret
 
+		otpconf := dgoogauth.OTPConfig {
+			Secret:       secret,
+			WindowSize:   3,
+			HotpCounter:  0,
+			ScratchCodes: []int{},
+		}
+
+		url := otpconf.ProvisionURIWithIssuer(data.Name, "")
+		// 生成二维码
+		if e := creatQrAndSendMail(1, data.Name, data.Password, data.Email, url); e != nil {
+			util.JsonRespond(500, e.Error(), "", c)
+			return
+		}
+	} else {
+		if e := creatQrAndSendMail(0, data.Name, data.Password, data.Email, ""); e != nil {
+			util.JsonRespond(500, e.Error(), "", c)
+			return
+		}
+	}
+
+	e := models.DB.Save(&myuser).Error
 	if e != nil {
 		util.JsonRespond(500, e.Error(), "", c)
 		return
 	}
 
 	util.JsonRespond(200, "添加用户成功", "", c)
+}
+
+func creatQrAndSendMail(isQr int, name, password, email, content string) error  {
+	mailinfo := make(map[string]string)
+	var set models.Settings
+	models.DB.Model(&models.Settings{}).
+		Where("name = ? ", "mail_service").
+		Find(&set)
+
+	if set.ID == 0 {
+		errors.New("没有找到系统默认邮箱设置，无法发送系统邮件，请先设置系统默认发送邮箱！")
+	}
+
+	if e 	:= json.Unmarshal([]byte(set.Value), &mailinfo); e != nil {
+		return e
+	}
+
+	if isQr == 1 {
+		dir, e := os.Getwd()
+		if e != nil {
+			return e
+		}
+		path := dir + "/" + upload.GetImageFullPath() + "qr"
+		if e := file.IsNotExistMkDir(path); e != nil {
+			return e
+		}
+
+		if e := qrcode.WriteFile(content, qrcode.Medium, 256, path+"/"+name+".png"); e != nil {
+			return e
+		}
+		sub 	:= "用户创建成功"
+		message	:= "你的用户已经创建，用户名为 ： " + name + "初始密码为 ：" + password + "。 请及时登录平台到个人中心修改。\r你已经启用了双因子认证，请用相应工具扫描附件的二维码或者访问平台地址： xxxx"
+
+		msg := models.CreateMsgWithAnnex(mailinfo["username"], []string{email},sub, message,path+"/"+name+".png")
+		if e := models.SendEmail(mailinfo, msg); e != nil {
+			return e
+		}
+	} else {
+		sub 	:= "用户创建成功"
+		message	:= "你的用户已经创建，用户名为 ： " + name + "初始密码为 ：" + password + "。 请及时登录平台到个人中心修改。"
+
+		msg := models.CreateMsg(mailinfo["username"], []string{email}, sub, message)
+		if e := models.SendEmail(mailinfo, msg); e != nil {
+			return e
+		}
+	}
+
+	return nil
+}
+
+func updateQrAndSendMail(name, email, content string) error  {
+	mailinfo := make(map[string]string)
+	var set models.Settings
+	models.DB.Model(&models.Settings{}).
+		Where("name = ? ", "mail_service").
+		Find(&set)
+
+	if set.ID == 0 {
+		errors.New("没有找到系统默认邮箱设置，无法发送系统邮件，请先设置系统默认发送邮箱！")
+	}
+
+	if e 	:= json.Unmarshal([]byte(set.Value), &mailinfo); e != nil {
+		return e
+	}
+
+	dir, e := os.Getwd()
+	if e != nil {
+		return e
+	}
+
+	path := dir + "/" + upload.GetImageFullPath() + "qr"
+	if e := file.IsNotExistMkDir(path); e != nil {
+		return e
+	}
+
+	if e := qrcode.WriteFile(content, qrcode.Medium, 256, path+"/"+name+".png"); e != nil {
+		return e
+	}
+	sub 	:= "用户修改成功"
+	message	:= "你已经启用了双因子认证，请用相应工具扫描附件的二维码或者访问平台地址： xxxx"
+
+	msg := models.CreateMsgWithAnnex(mailinfo["username"], []string{email}, sub, message,path+"/"+name+".png")
+	if e := models.SendEmail(mailinfo, msg); e != nil {
+		return e
+	}
+
+	return nil
 }
 
 // @Tags 用户管理
@@ -274,6 +424,28 @@ func PutUser(c *gin.Context)  {
 	user.Email 		= data.Email
 	user.Rid  		= data.Rid
 	user.IsActive	= data.IsActive
+
+	if user.TwoFactor != data.TwoFactor && data.TwoFactor == 1 {
+		secret, e := util.RetunRandString()
+		if e != nil {
+			util.JsonRespond(500, e.Error(), "", c)
+			return
+		}
+		user.Secret 	= secret
+		otpconf := dgoogauth.OTPConfig {
+			Secret:       secret,
+			WindowSize:   3,
+			HotpCounter:  0,
+			ScratchCodes: []int{},
+		}
+
+		url := otpconf.ProvisionURIWithIssuer(user.Name, "")
+		if e := updateQrAndSendMail(user.Name, data.Email, url); e != nil {
+			util.JsonRespond(500, e.Error(), "", c)
+			return
+		}
+	}
+	user.TwoFactor  = data.TwoFactor
 
 	if len(data.Password) > 0 {
 		PasswordHash, err := util.HashPassword(data.Password)
@@ -490,4 +662,16 @@ func GetUserMenu(c *gin.Context)  {
 
 	data["lists"] = res
 	util.JsonRespond(200, "", data, c)
+}
+
+func TestQr(c *gin.Context)  {
+	otp, e := twofactor.NewTOTP("junun", "google", crypto.SHA1, 8)
+	if e != nil {
+		util.JsonRespond(500, e.Error(), "", c)
+		return
+	}
+
+	tmp, _ := otp.QR()
+
+	util.JsonRespond(200, "", tmp, c)
 }

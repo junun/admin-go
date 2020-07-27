@@ -1,6 +1,24 @@
 package models
 
-import "gopkg.in/gomail.v2"
+import (
+	"gopkg.in/gomail.v2"
+	"strconv"
+)
+
+// 自定义发送邮箱
+func InitDialer(host, user, pass string , port int) *gomail.Dialer {
+	return gomail.NewDialer(host, port, user, pass)
+}
+
+func SendEmail(mailinfo map[string]string, msg *gomail.Message) error {
+	port, _ := strconv.Atoi(mailinfo["port"])
+	gd		:= InitDialer(mailinfo["server"], mailinfo["username"], mailinfo["password"], port)
+	if e 	:= gd.DialAndSend(msg); e != nil {
+		return e
+	}
+
+	return nil
+}
 
 // 生成消息体
 func CreateMsg(mailFrom string, mailTo []string, subject string, body string) *gomail.Message{

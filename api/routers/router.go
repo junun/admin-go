@@ -38,6 +38,9 @@ func InitRouter() *gin.Engine {
 	//r.GET("/debug/symbol", gin.WrapH(pprof.Handler("symbol")))
 	//r.GET("/debug/trace", gin.WrapH(pprof.Handler("trace")))
 
+	// test qr
+	r.GET("/qr", admin.TestQr)
+
 	// metrics
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 

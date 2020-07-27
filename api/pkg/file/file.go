@@ -1,6 +1,7 @@
 package file
 
 import (
+	"fmt"
 	"io/ioutil"
 	"mime/multipart"
 	"os"
@@ -30,7 +31,8 @@ func CheckPermission(src string) bool {
 }
 
 func IsNotExistMkDir(src string) error {
-	if exist := CheckExist(src); exist == false {
+	e := CheckExist(src)
+	if e == true {
 		if err := MkDir(src); err != nil {
 			return err
 		}
@@ -41,6 +43,7 @@ func IsNotExistMkDir(src string) error {
 
 func MkDir(src string) error {
 	err := os.MkdirAll(src, os.ModePerm)
+	fmt.Println(err)
 	if err != nil {
 		return err
 	}

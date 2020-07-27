@@ -1,8 +1,11 @@
 package util
 
 import (
+	"api/models"
 	"api/pkg/logging"
 	"api/pkg/setting"
+	"crypto/rand"
+	"crypto/rsa"
 	"fmt"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -25,6 +28,52 @@ func ReturnAppGitRoot(aid int) string {
 	path 	:= dir + "/" + GetGitLocalPath() + strconv.Itoa(aid)
 
 	return path
+}
+
+func ReturnAuthConfig() (*ssh.PublicKeys, error) {
+	// 获取私钥
+	var set models.Settings
+	models.DB.Model(&models.Settings{}).
+		Where("name = ? ", "private_key").
+		Find(&set)
+	keystr := ""
+	if set.ID == 0 {
+		key, e := rsa.GenerateKey(rand.Reader, 2048)
+		if e != nil {
+			logging.Error("Private key cannot be created.", e.Error())
+			return nil, e
+		}
+		pubkey 			:= &key.PublicKey
+		privateKey, _ 	:= DumpPrivateKeyBuffer(key)
+		publicKey,  _ 	:= DumpPublicKeyBuffer(pubkey)
+		publicKeyStr, _ := LoadPublicKeyToAuthorizedFormat(publicKey)
+
+		setPrivateKey 	:= models.Settings{Name: "private_key", Value: privateKey, Desc: "私钥"}
+		setPublicKey 	:= models.Settings{Name: "public_key", Value: publicKeyStr, Desc: "公钥"}
+
+		if e:= models.DB.Create(&setPrivateKey).Error; e!=nil{
+			return nil, e
+		}
+
+		if e:=  models.DB.Create(&setPublicKey).Error; e!=nil{
+			return nil, e
+		}
+
+		keystr = privateKey
+	} else  {
+		keystr = set.Value
+	}
+
+	sshAuth, e := ssh.NewPublicKeys(
+		"git",
+		[]byte(keystr),
+		"")
+
+	if e != nil {
+		return nil, e
+	}
+
+	return  sshAuth, nil
 }
 
 func ReturnGitLocalPath(aid int, url string) string {
@@ -77,19 +126,24 @@ func ReturnGitWorkDir(aid int, url string) (*git.Worktree, error) {
 func GitCLone(aid int, url string) error {
 	path := ReturnGitLocalPath(aid, url)
 
-	sshAuth, err := ssh.NewPublicKeysFromFile(
-		"git",
-		setting.AppSetting.GitSshKey, "")
+	//sshAuth, err := ssh.NewPublicKeysFromFile(
+	//	"git",
+	//	setting.AppSetting.GitSshKey, "")
 
-	_, err 		= git.PlainClone(path, false, &git.CloneOptions{
+	sshAuth, e := ReturnAuthConfig()
+	if e != nil {
+		return e
+	}
+
+	_, e 		= git.PlainClone(path, false, &git.CloneOptions{
 		URL:               	url,
 		RecurseSubmodules: 	git.DefaultSubmoduleRecursionDepth,
 		Auth:              	sshAuth,
 		NoCheckout:			true,
 	})
 
-	if err != nil {
-		return err
+	if e != nil {
+		return e
 	}
 
 	return nil
@@ -101,9 +155,14 @@ func GitPull(aid int, url string) error {
 		return e
 	}
 
-	sshAuth, e := ssh.NewPublicKeysFromFile(
-		"git",
-		setting.AppSetting.GitSshKey, "")
+	//sshAuth, e := ssh.NewPublicKeysFromFile(
+	//	"git",
+	//	setting.AppSetting.GitSshKey, "")
+
+	sshAuth, e := ReturnAuthConfig()
+	if e != nil {
+		return e
+	}
 
 	// Pull the latest changes from the origin remote and merge into the current branch
 	e = w.Pull(&git.PullOptions{
