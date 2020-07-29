@@ -74,6 +74,7 @@ func CreateAdmin() {
 		user.Nickname 			= "admin"
 		user.IsSupper			= 1
 		user.IsActive 			= 1
+		user.TwoFactor			= 0
 
 		if e := models.DB.Create(&user).Error; e != nil {
 			panic(e)

@@ -183,6 +183,11 @@ class ListPage extends React.Component {
     {
       title: '角色',
       dataIndex: 'Rid',
+      'render': Rid => this.props.rolesList.map(x => {
+        if (Rid == x.id) {
+          return x.Name
+        }
+      })
     },
     {
     title: '操作',

@@ -232,7 +232,7 @@ func ReturnGitTagByCommand(aid int, url string) ([]string, error) {
 		return nil, e
 	}
 
-	cmd 		= exec.Command("git", "tag", "--sort=-creatordate", "-n")
+	cmd 		= exec.Command("git", "tag",  "-n")
 	cmd.Dir 	= ReturnGitLocalPath(aid, url)
 	out, e 		:= cmd.CombinedOutput()
 

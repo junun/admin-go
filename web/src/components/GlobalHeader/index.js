@@ -42,7 +42,7 @@ const GlobalHeader = ({ title, user, onMenuClick, notifies, read, loading, handl
                   <div key="2" style={{fontSize: 12}}>{moment(item.CreateTime).fromNow()}</div>
                 ]}/>
             </List.Item>
-          )}/>
+          )} />
         {notifies.length !== 0 && (
           <div className={styles.notifyFooter} onClick={() => handleReadAll()}>全部 已读</div>
         )}

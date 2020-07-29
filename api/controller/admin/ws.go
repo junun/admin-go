@@ -701,6 +701,12 @@ func BackendJarUndoHost(hid string, helper help.Helper, det models.DeployExtend,
 	if e := helper.Remote(hid,3, Scli, cmd); e != nil {
 		return e
 	}
+
+	cmd = "chown tomcat:tomcat " + appDir + "/" + app.Name + "-" + det.Tag + ".jar "
+	if e := helper.Remote(hid,3, Scli, cmd); e != nil {
+		return e
+	}
+
 	msg = util.HumanNowTime() + " 完成  "
 	helper.SendSetup(hid, 3, msg)
 	helper.WsWriteMsg(hid, 3, msg, "")
@@ -800,6 +806,12 @@ func BackendJarDeployHost(hid string, helper help.Helper, det models.DeployExten
 	if e := helper.Remote(hid,3, Scli, cmd); e != nil {
 		return e
 	}
+
+	cmd = "chown tomcat:tomcat " + appDir + "/" + appTagName
+	if e := helper.Remote(hid,3, Scli, cmd); e != nil {
+		return e
+	}
+
 	msg = util.HumanNowTime() + " 完成  "
 	helper.SendSetup(hid, 3, msg)
 	helper.WsWriteMsg(hid, 3, msg, "")

@@ -124,10 +124,10 @@ const (
 //}
 
 func GetGitTag(c *gin.Context)  {
-	if !middleware.PermissionCheckMiddleware(c,"config-app-git") {
-		util.JsonRespond(403, "请求资源被拒绝", "", c)
-		return
-	}
+	//if !middleware.PermissionCheckMiddleware(c,"config-app-git") {
+	//	util.JsonRespond(403, "请求资源被拒绝", "", c)
+	//	return
+	//}
 	var det models.DeployExtend
 
 	models.DB.Model(&models.DeployExtend{}).
@@ -643,8 +643,11 @@ func PostDeployRequest(c *gin.Context)  {
 	models.DB.Model(&models.User{}).
 		Where("id = ?", uid).
 		Find(&user)
+
 	if user.IsSupper != 1 {
-		middleware.RoleAppAuthMiddleware(user.Rid, res.EnvId, res.Aid, c)
+		if !middleware.RoleAppAuthMiddleware(user.Rid, res.EnvId, res.Aid, c) {
+			return
+		}
 	}
 
 	// 检查项目是否需要初始化

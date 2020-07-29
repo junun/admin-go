@@ -3,7 +3,6 @@ package admin
 import (
 	"api/middleware"
 	"api/models"
-	"api/pkg/curlwhois"
 	"api/pkg/util"
 	"github.com/gin-gonic/gin"
 	"github.com/likexian/whois-go"
@@ -272,10 +271,11 @@ func CheckDomainCert(domain models.DomainInfo) {
 }
 
 func CheckDomainMaster(domain models.DomainInfo)  {
-	resWho, e 		:= whois.Whois(domain.Name)
+	resWho, e 	:= whois.Whois(domain.Name)
 	if e != nil {
-		// 启用备用检测方式
-		CheckDomainBackup(domain)
+		//// 启用备用检测方式
+		//CheckDomainBackup(domain)
+		models.MakeNotify(1, 2,"定时任务异常" + e.Error(),"域名" + domain.Name + "查询异常！","" )
 		return
 	}
 
@@ -283,31 +283,18 @@ func CheckDomainMaster(domain models.DomainInfo)  {
 	if e != nil {
 		models.MakeNotify(1, 2,"定时任务异常" + e.Error(),"域名" + domain.Name + "有效性信息解析错误请检测！","" )
 
-		// 启用备用检测方式
-		CheckDomainBackup(domain)
+		//// 启用备用检测方式
+		//CheckDomainBackup(domain)
 		return
 	}
 
-	if resParse.Domain.ExpirationDate == "0001-01-01 00:00:00 +0000 UTC" {
-		// 启用备用检测方式
-		CheckDomainBackup(domain)
-		return
-	}
+	//if resParse.Domain.ExpirationDate == "0001-01-01 00:00:00 +0000 UTC" {
+	//	// 启用备用检测方式
+	//	CheckDomainBackup(domain)
+	//	return
+	//}
 
 	handDomainParse(domain, resParse.Domain.ExpirationDate)
-}
-
-func CheckDomainBackup(domain models.DomainInfo)  {
-	e,  res := curlwhois.Whois(domain.Name)
-	if e != nil {
-		_ = models.DingtalkSentChannel(0, "@" + models.DingUser + "域名" + domain.Name + "有效性信息检测主备都失败，请检查！", models.DingList, false)
-
-		models.MakeNotify(1, 2,"定时任务域名检测错误" + e.Error(),"域名" + domain.Name + "有效性信息检测主备都失败，请检查！","" )
-
-		return
-	}
-
-	handDomainParse(domain, res.ExpirationDate)
 }
 
 func handDomainParse(domain models.DomainInfo, timestr string)  {

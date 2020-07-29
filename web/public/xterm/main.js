@@ -155,8 +155,8 @@ function run(id, token) {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const hostname = window.location.hostname;
   const port = window.location.port;
-  // const sock = new window.WebSocket(`${protocol}//${hostname}:${port}/admin/ws/${id}/ssh/${token}`),
-  const  sock = new window.WebSocket(`${protocol}//127.0.0.1:9090/admin/ws/${id}/ssh/${token}`),
+  const sock = new window.WebSocket(`${protocol}//${hostname}:${port}/admin/ws/${id}/ssh/${token}`),
+  // const  sock = new window.WebSocket(`${protocol}//127.0.0.1:9090/admin/ws/${id}/ssh/${token}`),
     encoding = 'utf-8',
     decoder = window.TextDecoder ? new window.TextDecoder(encoding) : encoding,
     terminal = document.getElementById('terminal'),

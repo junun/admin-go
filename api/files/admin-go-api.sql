@@ -11,7 +11,7 @@
  Target Server Version : 50725
  File Encoding         : 65001
 
- Date: 21/07/2020 19:39:48
+ Date: 28/07/2020 16:48:39
 */
 
 SET NAMES utf8mb4;
@@ -33,7 +33,8 @@ CREATE TABLE `app` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COMMENT='项目列表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目列表';
+
 
 
 -- ----------------------------
@@ -58,7 +59,7 @@ CREATE TABLE `app_deploy` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=66 DEFAULT CHARSET=utf8mb4 COMMENT='应用发布信息表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='应用发布信息表';
 
 
 -- ----------------------------
@@ -74,8 +75,7 @@ CREATE TABLE `app_sync_value` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COMMENT='业务初始变量表';
-
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb4 COMMENT='业务初始变量表';
 
 
 -- ----------------------------
@@ -89,7 +89,8 @@ CREATE TABLE `app_type` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COMMENT='业务类型表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='业务类型表';
+
 
 
 -- ----------------------------
@@ -105,7 +106,8 @@ CREATE TABLE `app_value` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COMMENT='业务变量关联表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='业务变量关联表';
+
 
 
 -- ----------------------------
@@ -119,7 +121,7 @@ CREATE TABLE `config_env` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COMMENT='环境类型';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='环境类型';
 
 
 -- ----------------------------
@@ -148,8 +150,7 @@ CREATE TABLE `deploy_extend` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`dtid`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COMMENT='项目发布模板表';
-
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目发布模板表';
 
 
 -- ----------------------------
@@ -168,7 +169,8 @@ CREATE TABLE `domain_info` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COMMENT='域名信息表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='域名信息表';
+
 
 -- ----------------------------
 -- Table structure for host
@@ -190,7 +192,8 @@ CREATE TABLE `host` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COMMENT='主机表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='主机表';
+
 
 
 -- ----------------------------
@@ -206,7 +209,8 @@ CREATE TABLE `host_app` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COMMENT='主机业务关联表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='主机业务关联表';
+
 
 
 -- ----------------------------
@@ -220,7 +224,7 @@ CREATE TABLE `host_role` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COMMENT='主机类型';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='主机类型';
 
 
 -- ----------------------------
@@ -328,6 +332,13 @@ INSERT INTO `menu_permissions` VALUES (130, '系统设置', 1, 1, '', '/system/s
 INSERT INTO `menu_permissions` VALUES (131, '机器人通道', 1, 1, '', '/system/robot', 'robot', '机器人告警渠道 钉钉 微信 等');
 INSERT INTO `menu_permissions` VALUES (132, '发布请求', 67, 2, 'deploy-app-request', '', '', '发布请求');
 INSERT INTO `menu_permissions` VALUES (133, '回滚请求', 67, 2, 'undo-app-request', '', '', '回滚请求');
+INSERT INTO `menu_permissions` VALUES (134, '系统设置', 130, 2, 'setting-add', '', '', '系统设置页面保存');
+INSERT INTO `menu_permissions` VALUES (135, '邮件测试', 130, 2, 'setting-email-test', '', '', '系统设置邮件测试');
+INSERT INTO `menu_permissions` VALUES (136, 'LDAP测试', 130, 2, 'setting-ldap-test', '', '', 'LDAP测试');
+INSERT INTO `menu_permissions` VALUES (137, '机器人测试', 131, 2, 'setting-robot-test', '', '', '机器人测试');
+INSERT INTO `menu_permissions` VALUES (138, '机器人删除', 131, 2, 'setting-robot-del', '', '', '机器人删除');
+INSERT INTO `menu_permissions` VALUES (139, '机器人修改', 131, 2, 'setting-robot-edit', '', '', '机器人修改');
+INSERT INTO `menu_permissions` VALUES (140, '机器人添加', 131, 2, 'setting-robot-add', '', '', '机器人添加');
 COMMIT;
 
 -- ----------------------------
@@ -345,7 +356,8 @@ CREATE TABLE `notify` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=44 DEFAULT CHARSET=utf8mb4 COMMENT='通知信息表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='通知信息表';
+
 
 
 -- ----------------------------
@@ -358,7 +370,8 @@ CREATE TABLE `role` (
   `desc` varchar(255) NOT NULL DEFAULT '' COMMENT '角色介绍',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COMMENT='角色表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='角色表';
+
 
 
 -- ----------------------------
@@ -373,8 +386,7 @@ CREATE TABLE `role_env_app` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COMMENT='角色-环境(env)-应用(app)关联表';
-
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色-环境(env)-应用(app)关联表';
 
 
 -- ----------------------------
@@ -389,7 +401,7 @@ CREATE TABLE `role_env_host` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COMMENT='角色-环境(env)-主机(host)关联表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色-环境(env)-主机(host)关联表';
 
 
 
@@ -402,7 +414,8 @@ CREATE TABLE `role_permission_rel` (
   `rid` int(11) NOT NULL DEFAULT '0' COMMENT '角色id',
   `pid` int(11) NOT NULL DEFAULT '0' COMMENT '权限id',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=86 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 
 -- ----------------------------
 -- Table structure for setting_robot
@@ -419,7 +432,8 @@ CREATE TABLE `setting_robot` (
   `desc` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 
 
 -- ----------------------------
@@ -433,7 +447,9 @@ CREATE TABLE `settings` (
   `desc` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`),
   UNIQUE KEY `key` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
 
 -- ----------------------------
 -- Table structure for task
@@ -456,7 +472,8 @@ CREATE TABLE `task` (
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `task_name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COMMENT='任务列表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='任务列表';
+
 
 
 -- ----------------------------
@@ -473,7 +490,8 @@ CREATE TABLE `task_history` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `task_host_index` (`task_id`,`host_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COMMENT='任务执行历史信息表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='任务执行历史信息表';
+
 
 -- ----------------------------
 -- Table structure for user
@@ -495,6 +513,6 @@ CREATE TABLE `user` (
   `token_expired` int(11) NOT NULL DEFAULT '0' COMMENT 'token过期时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COMMENT='用户表'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
 
 SET FOREIGN_KEY_CHECKS = 1;

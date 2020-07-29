@@ -89,7 +89,7 @@ class CommonDeploy extends React.Component {
         const hostname = window.location.hostname;
         const port = window.location.port;
 
-        this.socket = new window.WebSocket(`${protocol}//${hostname}:${port}/admin/deploy/ws/${id}/ssh/${token}`);
+        this.socket = new window.WebSocket(`${protocol}//${hostname}:${port}/admin/deploy/ws/${this.id}/ssh/${this.token}`);
         // this.socket = new window.WebSocket(`${protocol}//127.0.0.1:9090/admin/deploy/ws/${this.id}/ssh/${this.token}`);
 
         this.socket.onopen = () => {

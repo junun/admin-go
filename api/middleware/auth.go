@@ -152,21 +152,24 @@ func WsTokenAuthMiddleware(pemr string, c *gin.Context)  {
 	c.Set("Uid", user.ID)
 }
 
-func RoleAppAuthMiddleware(rid, eid, aid int, c *gin.Context) {
+func RoleAppAuthMiddleware(rid, eid, aid int, c *gin.Context) bool {
 	var app  models.RoleEnvApp
 	models.DB.Model(&models.RoleEnvApp{}).
 		Where("rid = ?", rid).
 		Where("eid = ?", eid).
 		Find(&app)
+
 	if app.ID == 0 {
-		util.JsonRespond(404, "请求应用资源不存在，请检查！", "", c)
-		return
+		util.JsonRespond(403, "该角色没有当前环境下该应用的操作权限！", "", c)
+		return false
 	}
 
 	if !util.StrArrContains(strings.Split(app.AppIds, ","), strconv.Itoa(aid)) {
 		util.JsonRespond(403, "请求应用资源被拒绝！", "", c)
-		return
+		return false
 	}
+
+	return true
 }
 
 func Cors() gin.HandlerFunc {

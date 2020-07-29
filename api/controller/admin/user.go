@@ -332,7 +332,7 @@ func creatQrAndSendMail(isQr int, name, password, email, content string) error  
 			return e
 		}
 		sub 	:= "用户创建成功"
-		message	:= "你的用户已经创建，用户名为 ： " + name + "初始密码为 ：" + password + "。 请及时登录平台到个人中心修改。\r你已经启用了双因子认证，请用相应工具扫描附件的二维码或者访问平台地址： xxxx"
+		message	:= "你的用户已经创建，用户名为 ： " + name + "初始密码为 ：" + password + "。 请及时登录平台到个人中心修改。\r你已经启用了双因子认证，请用相应工具扫描附件的二维码或者访问平台地址： http://10.101.1.149:3000/upload/images/qr/" + name + ".png"
 
 		msg := models.CreateMsgWithAnnex(mailinfo["username"], []string{email},sub, message,path+"/"+name+".png")
 		if e := models.SendEmail(mailinfo, msg); e != nil {
